@@ -24,6 +24,9 @@ export ENV_OBFUSCATE_PART="TOKEN API KEY"
 # Use socat to listen on port 8188 and forward to 127.0.0.1:8181 (ie use an alternate port for Comfy to run)
 #export USE_SOCAT="true"
 
+# Use pip upgrade: default is to use pip install, set to true to use pip install --upgrade
+#export USE_PIPUPGRADE="true"
+
 # Base directory
 #export BASE_DIRECTORY="/basedir"
 

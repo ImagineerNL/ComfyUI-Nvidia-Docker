@@ -66,6 +66,14 @@ else
   echo "== Using alternate behavior: socat listens on 0.0.0.0:8188 -> forward to ComfyUI on ${LISTEN_ADDRESS}:${LISTEN_PORT}"
 fi
 
+USE_PIPUPGRADE=${USE_PIPUPGRADE:-"false"}
+if [ "A${USE_PIPUPGRADE}" = "Afalse" ]; then
+  PIP3_CMD="pip3 install --trusted-host pypi.org --trusted-host files.pythonhosted.org"
+else
+  PIP3_CMD="pip3 install --upgrade --trusted-host pypi.org --trusted-host files.pythonhosted.org"
+fi
+echo "== PIP3_CMD: \"${PIP3_CMD}\""
+
 # Set ComfyUI base command line
 it=$itdir/comfy_cmdline_base
 if [ -f $it ]; then COMFY_CMDLINE_BASE=$(cat $it); fi
@@ -461,9 +469,9 @@ run_userscript $it "chmod"
 cd ComfyUI
 it=requirements.txt
 echo ""; echo "== Installing/Updating from ComfyUI's requirements"
-pip3 install --trusted-host pypi.org --trusted-host files.pythonhosted.org -r $it || error_exit "ComfyUI requirements install/upgrade failed"
+${PIP3_CMD} -r $it || error_exit "ComfyUI requirements install/upgrade failed"
 echo ""; echo "== Installing Huggingface Hub"
-pip3 install --trusted-host pypi.org --trusted-host files.pythonhosted.org -U "huggingface_hub[cli]" || error_exit "HuggingFace Hub CLI install/upgrade failed"
+${PIP3_CMD} "huggingface_hub[cli]" || error_exit "HuggingFace Hub CLI install/upgrade failed"
 
 export COMFYUI_PATH=`pwd`
 echo ""; echo "-- COMFYUI_PATH: ${COMFYUI_PATH}"
@@ -479,7 +487,7 @@ if [ ! -d ComfyUI-Manager ]; then
 fi
 if [ ! -d ComfyUI-Manager ]; then error_exit "ComfyUI-Manager not found"; fi
 echo "== Installing/Updating ComfyUI-Manager's requirements (from ${customnodes_dir}/ComfyUI-Manager/requirements.txt)"
-pip3 install --trusted-host pypi.org --trusted-host files.pythonhosted.org -r ${customnodes_dir}/ComfyUI-Manager/requirements.txt || error_exit "ComfyUI-Manager CLI requirements install/upgrade failed" 
+${PIP3_CMD} -r ${customnodes_dir}/ComfyUI-Manager/requirements.txt || error_exit "ComfyUI-Manager CLI requirements install/upgrade failed" 
 
 # Please see https://github.com/ltdrdata/ComfyUI-Manager?tab=readme-ov-file#security-policy for details on authorized values
 # recent releases of ComfyUI-Manager have a config.ini file in the user folder, if this is not present, we expect it in the default folder
