@@ -487,13 +487,21 @@ run_userscript $it "chmod"
 PREINSTALL_TORCH=${PREINSTALL_TORCH:-"true"}
 if [ "A${PREINSTALL_TORCH}" == "Atrue" ]; then
   echo ""; echo "== Pre-installing/Upgrading torch"
-# https://pytorch.org/get-started/previous-versions/
-  if [ "$cuda_minor" -lt 6 ]; then # CUDA 12.4
-    it="${PIP3_CMD} torch==2.6.0 torchvision==0.21.0 torchaudio==2.6.0 --index-url https://download.pytorch.org/whl/cu124"
-  elif [ "$cuda_minor" -lt 8 ]; then # CUDA 12.6
-    it="${PIP3_CMD} torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu126"
-  else # CUDA 12.8
-    it="${PIP3_CMD} torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128"
+  # Allow the override of the torch installation command
+  if [ ! -z "${PREINSTALL_TORCH_CMD+x}" ]; then
+    it="${PREINSTALL_TORCH_CMD}"
+  else
+    it="${PIP3_CMD} torch torchvision torchaudio"
+    if [ "$cuda_major" -lt 13 ]; then
+    # https://pytorch.org/get-started/previous-versions/
+      if [ "$cuda_minor" -lt 6 ]; then # CUDA 12.4
+        it="${PIP3_CMD} torch==2.6.0 torchvision==0.21.0 torchaudio==2.6.0 --index-url https://download.pytorch.org/whl/cu124"
+      elif [ "$cuda_minor" -lt 8 ]; then # CUDA 12.6
+        it="${PIP3_CMD} torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu126"
+      else # CUDA 12.8
+        it="${PIP3_CMD} torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128"
+      fi
+    fi
   fi
   echo "Running: ${it}"
   ${it} || error_exit "Torch installation failed"
