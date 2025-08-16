@@ -76,10 +76,11 @@ else
 fi
 
 USE_PIPUPGRADE=${USE_PIPUPGRADE:-"true"}
+DEFAULT_PIP3_CMD="pip3 install --trusted-host pypi.org --trusted-host files.pythonhosted.org"
 if [ "A${USE_PIPUPGRADE}" == "Atrue" ]; then
-  PIP3_CMD="pip3 install --upgrade --trusted-host pypi.org --trusted-host files.pythonhosted.org"
+  PIP3_CMD="${DEFAULT_PIP3_CMD} --upgrade"
 else
-  PIP3_CMD="pip3 install --trusted-host pypi.org --trusted-host files.pythonhosted.org"
+  PIP3_CMD="${DEFAULT_PIP3_CMD}"
 fi
 echo "== PIP3_CMD: \"${PIP3_CMD}\""
 
@@ -509,6 +510,9 @@ if [ "A${PREINSTALL_TORCH}" == "Atrue" ]; then
     if [ "$cuda_major" -lt 13 ]; then
     # https://pytorch.org/get-started/previous-versions/
       if [ "$cuda_minor" -lt 6 ]; then # CUDA 12.4
+        echo "== Will be installing torch 2.6.0 for CUDA 12.4, disabling upgrade for pip3 if enabled to avoid overwriting torch"
+        PIP3_CMD="${DEFAULT_PIP3_CMD}"
+        echo "== PIP3_CMD: \"${PIP3_CMD}\""
         it="${PIP3_CMD} torch==2.6.0 torchvision==0.21.0 torchaudio==2.6.0 --index-url https://download.pytorch.org/whl/cu124"
       elif [ "$cuda_minor" -lt 8 ]; then # CUDA 12.6
         it="${PIP3_CMD} torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu126"
