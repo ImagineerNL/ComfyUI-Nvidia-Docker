@@ -624,9 +624,9 @@ It can be disabled by setting `USE_PIPUPGRADE=false`.
 
 The `DISABLE_UPGRADES` environment variable is used to disable upgrades when starting the container (also disables USE_PIPUPGRADE).
 
-This option is disabled by default (set to `false`) as it is recommended to keep the UI up to date. To enable its features, set `DISABLE_UPGRADES=true`. 
+This option is disabled by default (set to `false`) as it is recommended to keep the UI up to date (since it was decoupled from the core code). To enable its features, set `DISABLE_UPGRADES=true`. 
 
-It is recommended to only use it on a fresh install of the container, as it will attempt to prevent Comfy and other Python packages from being upgraded outside of the WebUI.
+It is recommended to only use it on a fresh install of the container, as it will attempt to prevent Comfy and other Python packages from being upgraded outside of the WebUI. Any package update will have to be performed through the WebUI (ComfyUI Manager).
 
 ### 5.4.9. PREINSTALL_TORCH and PREINSTALL_TORCH_CMD
 
