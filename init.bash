@@ -54,51 +54,6 @@ itdir=/tmp/comfy_init
 if [ ! -d $itdir ]; then mkdir $itdir; chmod 777 $itdir; fi
 if [ ! -d $itdir ]; then error_exit "Failed to create $itdir"; fi
 
-# Default behavior: listen on 0.0.0.0
-USE_SOCAT=${USE_SOCAT:-"false"}
-if [ "A${USE_SOCAT}" == "Atrue" ]; then
-  LISTEN_ADDRESS="127.0.0.1"
-  LISTEN_PORT="8181"
-  echo "== Using alternate behavior: socat listens on 0.0.0.0:8188 -> forward to ComfyUI on ${LISTEN_ADDRESS}:${LISTEN_PORT}"
-else
-  USE_SOCAT="false"
-  LISTEN_ADDRESS="0.0.0.0"
-  LISTEN_PORT="8188"
-  echo "== Using default behavior: ComfyUI listens on ${LISTEN_ADDRESS}:${LISTEN_PORT}"
-fi
-
-DISABLE_UPGRADES=${DISABLE_UPGRADES:-"false"}
-if [ "A${DISABLE_UPGRADES}" == "Atrue" ]; then
-  echo "== Using alternate behavior: Disabling upgrade (including disabling USE_PIPUPGRADE)"
-  USE_PIPUPGRADE="false"
-else
-  echo "== Using default behavior: Enabling upgrades"
-fi
-
-USE_PIPUPGRADE=${USE_PIPUPGRADE:-"true"}
-DEFAULT_PIP3_CMD="pip3 install --trusted-host pypi.org --trusted-host files.pythonhosted.org"
-if [ "A${USE_PIPUPGRADE}" == "Atrue" ]; then
-  PIP3_CMD="${DEFAULT_PIP3_CMD} --upgrade"
-else
-  PIP3_CMD="${DEFAULT_PIP3_CMD}"
-fi
-echo "== PIP3_CMD: \"${PIP3_CMD}\""
-
-# Set ComfyUI base command line
-it=$itdir/comfy_cmdline_base
-if [ -f $it ]; then COMFY_CMDLINE_BASE=$(cat $it); fi
-COMFY_CMDLINE_BASE=${COMFY_CMDLINE_BASE:-"python3 ./main.py --listen ${LISTEN_ADDRESS} --port ${LISTEN_PORT} --disable-auto-launch"}
-if [ ! -f $it ]; then write_worldtmpfile $it "$COMFY_CMDLINE_BASE"; fi
-echo "-- COMFY_CMDLINE_BASE: \"${COMFY_CMDLINE_BASE}\""
-
-# Set ComfyUI command line extra
-if [ ! -z ${COMFY_CMDLINE_XTRA+x} ]; then COMFY_CMDLINE_EXTRA="${COMFY_CMDLINE_XTRA}"; fi # support previous variable
-it=$itdir/comfy_cmdline_extra
-if [ -f $it ]; then COMFY_CMDLINE_EXTRA=$(cat $it); fi
-COMFY_CMDLINE_EXTRA=${COMFY_CMDLINE_EXTRA:-""}
-if [ ! -f $it ]; then write_worldtmpfile $it "$COMFY_CMDLINE_EXTRA"; fi
-echo "-- COMFY_CMDLINE_EXTRA: \"${COMFY_CMDLINE_EXTRA}\""
-
 # Set user and group id
 it=$itdir/comfy_user_uid
 if [ -f $it ]; then WANTED_UID=$(cat $it); fi
@@ -129,7 +84,7 @@ echo "-- BASE_DIRECTORY: \"${BASE_DIRECTORY}\""
 # Validate base directory
 if [ ! -z "$BASE_DIRECTORY" ]; then if [ $BASE_DIRECTORY != $ignore_value ] && [ ! -d "$BASE_DIRECTORY" ]; then error_exit "BASE_DIRECTORY requested but not found or not a directory ($BASE_DIRECTORY)"; fi; fi
 
-echo "== Environment variables set"
+echo "== Most Environment variables set"
 
 # if command line arguments are provided, write them to a file, for example /bin/bash would give us a shell as comfy
 cmd_override_file=$itdir/comfy_run.sh
@@ -266,6 +221,56 @@ if [ -f $cmd_override_file ]; then
   # This is a complete override of the script, exit right after
   exit 0
 fi
+
+######## Environment variables (consume AFTER the load_env)
+
+# Default behavior: listen on 0.0.0.0
+USE_SOCAT=${USE_SOCAT:-"false"}
+if [ "A${USE_SOCAT}" == "Atrue" ]; then
+  LISTEN_ADDRESS="127.0.0.1"
+  LISTEN_PORT="8181"
+  echo "== Using alternate behavior: socat listens on 0.0.0.0:8188 -> forward to ComfyUI on ${LISTEN_ADDRESS}:${LISTEN_PORT}"
+else
+  USE_SOCAT="false"
+  LISTEN_ADDRESS="0.0.0.0"
+  LISTEN_PORT="8188"
+  echo "== Using default behavior: ComfyUI listens on ${LISTEN_ADDRESS}:${LISTEN_PORT}"
+fi
+
+# Set ComfyUI base command line
+it=$itdir/comfy_cmdline_base
+if [ -f $it ]; then COMFY_CMDLINE_BASE=$(cat $it); fi
+COMFY_CMDLINE_BASE=${COMFY_CMDLINE_BASE:-"python3 ./main.py --listen ${LISTEN_ADDRESS} --port ${LISTEN_PORT} --disable-auto-launch"}
+if [ ! -f $it ]; then write_worldtmpfile $it "$COMFY_CMDLINE_BASE"; fi
+echo "-- COMFY_CMDLINE_BASE: \"${COMFY_CMDLINE_BASE}\""
+
+# Set ComfyUI command line extra
+if [ ! -z ${COMFY_CMDLINE_XTRA+x} ]; then COMFY_CMDLINE_EXTRA="${COMFY_CMDLINE_XTRA}"; fi # support previous variable
+it=$itdir/comfy_cmdline_extra
+if [ -f $it ]; then COMFY_CMDLINE_EXTRA=$(cat $it); fi
+COMFY_CMDLINE_EXTRA=${COMFY_CMDLINE_EXTRA:-""}
+if [ ! -f $it ]; then write_worldtmpfile $it "$COMFY_CMDLINE_EXTRA"; fi
+echo "-- COMFY_CMDLINE_EXTRA: \"${COMFY_CMDLINE_EXTRA}\""
+
+
+DISABLE_UPGRADES=${DISABLE_UPGRADES:-"false"}
+if [ "A${DISABLE_UPGRADES}" == "Atrue" ]; then
+  echo "== Using alternate behavior: Disabling upgrade (including disabling USE_PIPUPGRADE)"
+  USE_PIPUPGRADE="false"
+else
+  echo "== Using default behavior: Enabling upgrades (behavior depends on USE_PIPUPGRADE)"
+fi
+
+USE_PIPUPGRADE=${USE_PIPUPGRADE:-"true"}
+DEFAULT_PIP3_CMD="pip3 install --trusted-host pypi.org --trusted-host files.pythonhosted.org"
+if [ "A${USE_PIPUPGRADE}" == "Atrue" ]; then
+  PIP3_CMD="${DEFAULT_PIP3_CMD} --upgrade"
+else
+  PIP3_CMD="${DEFAULT_PIP3_CMD}"
+fi
+echo "== PIP3_CMD: \"${PIP3_CMD}\""
+
+########## ComfyUI specific section below
 
 echo ""; echo "== Confirming we have the NVIDIA driver loaded and showing details for the seen GPUs"
 if ! command -v nvidia-smi &> /dev/null; then
@@ -450,8 +455,10 @@ echo -n "  Python version: "; python3 --version
 echo -n "  Pip version: "; pip3 --version
 echo -n "  python bin: "; which python3
 echo -n "  pip bin: "; which pip3
-echo "  PIP3_CMD: ${PIP3_CMD}"
 echo -n "  git bin: "; which git
+echo "  PIP3_CMD: ${PIP3_CMD}"
+echo -n "  DISABLE_UPGRADES: "; echo ${DISABLE_UPGRADES}
+echo -n "  USE_PIPUPGRADE: "; echo ${USE_PIPUPGRADE}
 
 
 run_userscript() {
@@ -498,43 +505,51 @@ it=${COMFYUSER_DIR}/mnt/postvenv_script.bash
 echo ""; echo "== Checking for post-venv script: ${it}"
 run_userscript $it "chmod"
 
-# Pre-install/upgrade Torch (default is true)
-PREINSTALL_TORCH=${PREINSTALL_TORCH:-"true"}
-if [ "A${PREINSTALL_TORCH}" == "Atrue" ]; then
-  echo ""; echo "== Pre-installing/Upgrading torch"
-  # Allow the override of the torch installation command
-  if [ ! -z "${PREINSTALL_TORCH_CMD+x}" ]; then
-    it="${PREINSTALL_TORCH_CMD}"
-  else
-    it="${PIP3_CMD} torch torchvision torchaudio"
-    if [ "$cuda_major" -lt 13 ]; then
-    # https://pytorch.org/get-started/previous-versions/
-      if [ "$cuda_minor" -lt 6 ]; then # CUDA 12.4
-        echo "== Will be installing torch 2.6.0 for CUDA 12.4, disabling upgrade for pip3 if enabled to avoid overwriting torch"
-        PIP3_CMD="${DEFAULT_PIP3_CMD}"
-        echo "== PIP3_CMD: \"${PIP3_CMD}\""
-        it="${PIP3_CMD} torch==2.6.0 torchvision==0.21.0 torchaudio==2.6.0 --index-url https://download.pytorch.org/whl/cu124"
-      elif [ "$cuda_minor" -lt 8 ]; then # CUDA 12.6
-        it="${PIP3_CMD} torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu126"
-      else # CUDA 12.8
-        it="${PIP3_CMD} torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128"
+# Pre-install/upgrade Torch (default is true, unless DISABLE_UPGRADES is set to true)
+if [ "A${DISABLE_UPGRADES}" == "Atrue" ]; then
+  echo "== Torch upgrade disabled by DISABLE_UPGRADES"
+else
+  PREINSTALL_TORCH=${PREINSTALL_TORCH:-"true"}
+  if [ "A${PREINSTALL_TORCH}" == "Atrue" ]; then
+    echo ""; echo "== Pre-installing/Upgrading torch"
+    # Allow the override of the torch installation command
+    if [ ! -z "${PREINSTALL_TORCH_CMD+x}" ]; then
+      it="${PREINSTALL_TORCH_CMD}"
+    else
+      it="${PIP3_CMD} torch torchvision torchaudio"
+      if [ "$cuda_major" -lt 13 ]; then
+      # https://pytorch.org/get-started/previous-versions/
+        if [ "$cuda_minor" -lt 6 ]; then # CUDA 12.4
+          echo "== Will be installing torch 2.6.0 for CUDA 12.4, disabling upgrade for pip3 if enabled to avoid overwriting torch"
+          PIP3_CMD="${DEFAULT_PIP3_CMD}"
+          echo "== PIP3_CMD: \"${PIP3_CMD}\""
+          it="${PIP3_CMD} torch==2.6.0 torchvision==0.21.0 torchaudio==2.6.0 --index-url https://download.pytorch.org/whl/cu124"
+        elif [ "$cuda_minor" -lt 8 ]; then # CUDA 12.6
+          it="${PIP3_CMD} torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu126"
+        else # CUDA 12.8
+          it="${PIP3_CMD} torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128"
+        fi
       fi
     fi
+    echo "Running: ${it}"
+    ${it} || error_exit "Torch installation failed"
   fi
-  echo "Running: ${it}"
-  ${it} || error_exit "Torch installation failed"
 fi
 
 # Install ComfyUI's requirements
 cd ComfyUI
 it=requirements.txt
-if [ "$A{DISABLE_UPGRADES}" != "Atrue" ]; then
+if [ "A${DISABLE_UPGRADES}" == "Atrue" ]; then
+  echo "== ComfyUI requirements upgrade disabled by DISABLE_UPGRADES"
+else
   echo ""; echo "== Installing/Updating from ComfyUI's requirements"
   ${PIP3_CMD} -r $it || error_exit "ComfyUI requirements install/upgrade failed"
 fi
 
 # Install Huggingface Hub
-if [ "$A{DISABLE_UPGRADES}" != "Atrue" ]; then
+if [ "A${DISABLE_UPGRADES}" == "Atrue" ]; then
+  echo "== Huggingface Hub upgrade disabled by DISABLE_UPGRADES"
+else
   echo ""; echo "== Installing Huggingface Hub"
   ${PIP3_CMD} "huggingface_hub[cli]" || error_exit "HuggingFace Hub CLI install/upgrade failed"
 fi
@@ -550,9 +565,13 @@ cd ${customnodes_dir}
 if [ ! -d ComfyUI-Manager ]; then
   echo "== Cloning ComfyUI-Manager (within ${customnodes_dir})"
   git clone https://github.com/ltdrdata/ComfyUI-Manager.git || error_exit "ComfyUI-Manager clone failed"
+  echo "== Installing ComfyUI-Manager's requirements (from ${customnodes_dir}/ComfyUI-Manager/requirements.txt)"
+  ${PIP3_CMD} -r ${customnodes_dir}/ComfyUI-Manager/requirements.txt || error_exit "ComfyUI-Manager CLI requirements installation failed" 
 fi
 if [ ! -d ComfyUI-Manager ]; then error_exit "ComfyUI-Manager not found"; fi
-if [ "$A{DISABLE_UPGRADES}" != "Atrue" ]; then
+if [ "A${DISABLE_UPGRADES}" == "Atrue" ]; then
+  echo "== ComfyUI-Manager packages upgrade disabled by DISABLE_UPGRADES"
+else
   echo "== Installing/Updating ComfyUI-Manager's requirements (from ${customnodes_dir}/ComfyUI-Manager/requirements.txt)"
   ${PIP3_CMD} -r ${customnodes_dir}/ComfyUI-Manager/requirements.txt || error_exit "ComfyUI-Manager CLI requirements install/upgrade failed" 
 fi
