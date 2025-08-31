@@ -255,38 +255,7 @@ podman run --rm -it --userns=keep-id --device nvidia.com/gpu=all -v `pwd`/run:/c
 
 ## 2.3. Docker compose
 
-In the directory where you want to run the compose stack, create the `compose.yaml` file with the following content:
-
-```yaml
-services:
-  comfyui-nvidia:
-    image: mmartial/comfyui-nvidia-docker:latest
-    container_name: comfyui-nvidia
-    ports:
-      - 8188:8188
-    volumes:
-      - ./run:/comfy/mnt
-      - ./basedir:/basedir
-    restart: unless-stopped
-    environment:
-      # set WANTED_UID and WANTED_GID to your user and group as obtained with `id -u` and `id -g`
-      - WANTED_UID=1000
-      - WANTED_GID=1000
-      - BASE_DIRECTORY=/basedir
-      - SECURITY_LEVEL=normal
-      - NVIDIA_VISIBLE_DEVICES=all
-      - NVIDIA_DRIVER_CAPABILITIES=all
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities:
-                - gpu
-                - compute
-                - utility
-```
+In the directory where you want to run the compose stack, create the `compose.yaml` file with content similar to the [`compose.yaml`](compose.yaml) file in this repository.
 
 This will use port 8188 (`host:container`). Use a `run` directory local to the directory where this `compose.yml` is, and specify the `WANTED_UID` and `WANTED_GID` to 1000 (adapt to reflect the user and group you want to run as, which can be obtained using the `id` command in a terminal). Make sure to create the `run` and `basedir` directories as the user with the desired uid and gid before running the docker-compose for the first time.
 
@@ -615,7 +584,7 @@ The `FORCE_CHOWN` environment variable is used to force change directory ownersh
 
 This option was added to support users who mount the `run` and `basedir` folders onto other hosts which might not respect the UID/GID of the `comfy` user.
 
-`FORCE_CHOWN` must be set with a non empty value (for example "yes: `-e FORCE_CHOWN=yes`) to be enabled.
+When set with any non empty value other than `false`, `FORCE_CHOWN` will be enabled.
 
 When set, it will "force chown" every sub-folder in the `run` and `basedir` folders when it first attempt to access them before verifying they are owned by the proper user.
 
