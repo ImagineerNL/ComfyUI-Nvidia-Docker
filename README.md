@@ -960,7 +960,7 @@ Process:
 - in the folder where your `run` and `basedir` are located, move the old folders to `run_off` and `basedir_off` and recreate new empty ones: `mv run run_off; mv basedir basedir_off; mkdir run basedir`
 - `docker run ...` a new container, which will reinstall everything as new. We note that none of the custom nodes will be installed. You will need to install each custom node manually after the process is complete (or redownload them from the ComfyUI-Manager by using older workflows embedded images)
 - after successful installation and confirmation that the WebUI is working, `docker stop comfyui-nvidia` the container but do not delete it
-- in the folder where your new `run` and `basedir` are located, replace the models with the `_old` ones: `rm -rf basedir/model; mv basedir_off/models basedir/`
+- in the folder where your new `run` and `basedir` are located, replace the models with the `_old` ones: `rm -rf basedir/models; mv basedir_off/models basedir/`
 - `docker start comfyui-nvidia` to restart the container, and test custom nodes installation by using the manager to enable `ComfyUI-Crystools`, follow the instructions and reload the WebUI
 
 You will still have previous content in the `run_off` and `basedir_off` folders, such as `basedir_off/output`, ...
