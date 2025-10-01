@@ -119,6 +119,7 @@ It is recommended that a container monitoring tool be available to watch the log
   - [2.1. Docker](#21-docker)
     - [2.1.1. docker run](#211-docker-run)
     - [2.1.2. docker compose up](#212-docker-compose-up)
+      - [2.1.2.1. docker compose up -- over tailscale](#2121-docker-compose-up----over-tailscale)
   - [2.2. Podman](#22-podman)
     - [2.2.1. podman run](#221-podman-run)
     - [2.2.2. podman compose up](#222-podman-compose-up)
@@ -261,6 +262,15 @@ Start it with `docker compose up` (with `-detached` to run the container in the 
 Please see [docker compose up](https://docs.docker.com/reference/cli/docker/compose/up/) reference manual for additional details.
 
 For users interested in adding it to a [Dockge](https://dockge.kuma.pet/) (a self-hosted Docker Compose stacks management tool ) stack,  please see my [Dockge blog post](https://www.gkr.one/blg-20240706-dockge) where we discuss directory and bind mounts (models take a lot of space).
+
+#### 2.1.2.1. docker compose up -- over tailscale
+
+Tailscale is a overlay network solution with a secure, peer-to-peer service that lets devices connect directly over the internet as if they were on the same local network (using 100. --ie CGNAT-- IPs). Tailscale is a significant part of my homelab access as described in "[Tailscale: subnet router & remote services access](https://www.gkr.one/blg-20250323-tailscale)".
+
+It is possible to run the container without exposing any ports that can be accessed on the local network, and access it only through tailscale. 
+
+To do so, adapt the `compose-tailscale.yaml` file to be your `compose.yaml` file.
+For more details on how we are achieving this, review the video from their Knowledge Base at https://tailscale.com/kb/1282/docker
 
 ## 2.2. Podman
 
