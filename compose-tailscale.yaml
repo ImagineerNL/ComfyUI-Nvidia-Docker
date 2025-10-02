@@ -7,7 +7,7 @@ services:
       - ./basedir:/basedir
 #      - ./userscripts_dir:/userscripts_dir
     restart: unless-stopped
-    # We are NOT exposing any ports, we will access it through tailscale -- use: tailscaleIP:8188 to access it
+    # We are NOT exposing any ports, we will access it through tailscale -- use: tailscaleIP:8188 to access it (find your tailscaleIP from your dashboard)
     environment:
       # set WANTED_UID and WANTED_GID to your user and group as obtained with `id -u` and `id -g`
       - WANTED_UID=1000
@@ -40,7 +40,6 @@ services:
       - TS_AUTHKEY=tskey-auth-... # Replace with your auth key
       - TS_STATE_DIR=/var/lib/tailscale
       - TS_USERSPACE=false
-      - TS_DEST_IP=100.80.207.19 # Replace with the tailscale IP you want to use
     volumes:
       - .ts:/var/lib/tailscale
     devices:
