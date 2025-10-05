@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# Install onnxruntime-gpu from PyPI
+#
 # https://onnxruntime.ai/
 # https://github.com/microsoft/onnxruntime
 
@@ -14,6 +16,6 @@ error_exit() {
 
 source /comfy/mnt/venv/bin/activate || error_exit "Failed to activate virtualenv"
 
-pip3 install onnxruntime-gpu || error_exit "Failed to install build dependencies"
+pip3 install onnxruntime-gpu || error_exit "Failed to install onnxruntime-gpu"
 
 exit 0

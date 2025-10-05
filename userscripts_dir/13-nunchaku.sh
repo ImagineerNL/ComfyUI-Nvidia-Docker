@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Install nunchaku
+# compile from source (if src/${BUILD_BASE}/nunchaku is NOT already present)
+#
 # https://github.com/nunchaku-tech/nunchaku
 
 set -e
@@ -54,6 +57,7 @@ echo "Compiling Nunchaku"
 
 git clone --recurse-submodules https://github.com/nunchaku-tech/nunchaku.git
 cd nunchaku
-EXT_PARALLEL=4 NVCC_APPEND_FLAGS="--threads 8" MAX_JOBS=32 pip3 install -e ".[dev,docs]" || error_exit "Failed to install SageAttention"
+NUMPROC=$(nproc --all)
+EXT_PARALLEL=4 NVCC_APPEND_FLAGS="--threads 8" MAX_JOBS=$NUMPROC pip3 install -e ".[dev,docs]" || error_exit "Failed to install Nunchaku"
 
 exit 0
