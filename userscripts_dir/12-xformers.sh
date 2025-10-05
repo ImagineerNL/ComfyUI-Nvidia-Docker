@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# https://github.com/facebookresearch/xformers
+
 echo "** Installing xformers**"
 
 set -e

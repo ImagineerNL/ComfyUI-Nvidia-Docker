@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# https://onnxruntime.ai/
+# https://github.com/microsoft/onnxruntime
+
 set -e
 
 error_exit() {

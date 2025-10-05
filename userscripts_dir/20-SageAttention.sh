@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# https://github.com/thu-ml/SageAttention
+
 min_sageattention_version="2.2.0"
 
 set -e

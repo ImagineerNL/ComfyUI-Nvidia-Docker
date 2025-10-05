@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# https://github.com/nunchaku-tech/nunchaku
+
 set -e
 
 error_exit() {
