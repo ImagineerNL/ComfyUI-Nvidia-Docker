@@ -1,6 +1,11 @@
 #!/bin/bash
 
-min_sageattention_version="2.1"
+# Install SageAttention
+# compile from source (if src/${BUILD_BASE}/SageAttention is NOT already present)
+#
+# https://github.com/thu-ml/SageAttention
+
+min_sageattention_version="2.2.0"
 
 set -e
 
@@ -70,11 +75,13 @@ cd ${BUILD_BASE}
 
 dd="/comfy/mnt/src/${BUILD_BASE}/SageAttention"
 if [ -d $dd ]; then
-  echo "SageAttention source already present, deleting $dd to force reinstallation"
-  rm -rf $dd
+  echo "SageAttention source already present, you must delete it at $dd to force reinstallation"
+  exit 0
 fi
+
 git clone https://github.com/thu-ml/SageAttention.git
 cd SageAttention
-python3 -s -m pip install . --no-build-isolation || error_exit "Failed to install SageAttention"
+NUMPROC=$(nproc --all)
+EXT_PARALLEL=4 NVCC_APPEND_FLAGS="--threads 8" MAX_JOBS=$NUMPROC python3 setup.py install || error_exit "Failed to install SageAttention"
 
 exit 0

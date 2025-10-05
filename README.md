@@ -505,10 +505,9 @@ If the file is not executable, the tool will attempt to make it executable, but 
 
 ⚠️ **WARNING**: This directory is used to run independent user scripts to perform additional operations that might damage your installation. This was added at the request of users trying to install packages from source. **Use with caution**. No support will be provided for issues resulting from the use of this directory. In case of trouble, it is recommended to delete the `run` folder and start a new container.
 
-Example scripts (which may not work --please feel free to contribute) are provided to demonstrate the capability. None are executable by default. Those scripts were added to enable end users to install components that needed to be built at the time, not yet supported by ComfyUI Manager, or for which no compatible packages were available.
+Scripts (which may not work --please feel free to contribute) provided to demonstrate the capability. None are executable by default. Those scripts were added to enable end users to install components that needed to be built at the time, not yet supported by ComfyUI Manager, or for which no compatible packages were available.
 
 If a pip version is available, it is recommended to use it instead of the `/userscripts_dir`.
-
 
 The `/userscripts_dir` is a directory that can be mounted to the container: add it to your command line with `-v /path/to/userscripts_dir:/userscripts_dir`.
 
@@ -516,18 +515,26 @@ The `/userscripts_dir` is a directory that can be mounted to the container: add 
 docker run [...] -v /path/to/userscripts_dir:/userscripts_dir [...] mmartial/comfyui-nvidia-docker:latest
 ```
 
-This directory is used to run independent user scripts in order to perform additional operations.
-A few examples scripts are provided in the `userscripts_dir` folder, such as installing `SageAttention` (see [userscripts_dir/20-SageAttention.sh](userscripts_dir/20-SageAttention.sh) for an example). 
+This directory is used to run independent user scripts in order to perform additional operations. Please note that the container **will only run executable `.sh` scripts** in this directory in alphanumerical order (`chmod -x script.sh` to disable execution of a given script). None of the scripts in the folder are executable by default.
+
+Each script differs, so it is recommended to read the comments at the beginining of each script to understand what it does and how to use it (in particular, some will not perform compilation if a previous version of the download folder is present).
+
+A few scripts are provided in the `userscripts_dir` folder:
+- [11-onnxruntime-gpu.sh](userscripts_dir/11-onnxruntime-gpu.sh)
+- [12-xformers.sh](userscripts_dir/12-xformers.sh)
+- [13-nunchaku.sh](userscripts_dir/13-nunchaku.sh)
+- [20-SageAttention.sh](userscripts_dir/20-SageAttention.sh)
+- [30-PortAudio.sh](userscripts_dir/30-PortAudio.sh)
+- [90_Fix_libmvec-2_error.sh](userscripts_dir/90_Fix_libmvec-2_error.sh)
 
 FAQ: 
-- The container will only run executable `.sh` scripts in this directory in alphanumerical order (`chmod -x script.sh` to disable execution of a given script). None of the scripts in the folder are executable by default.
 - Reserve its usage for installing custom nodes NOT available in ComfyUI Manager. 
 - The scripts will be run with the `comfy` user, so you will need to use `sudo` commands if needed. 
 - Some scripts might depend on previous scripts, so the order of execution is important: confirm that needed dependencies are met before performing installations.
 - If any script fails, the container will stop with an error.
 - Environment variables set by the script will be available to the calling script if they are saved in the `/tmp/comfy_${userscript_name}_env.txt` file, adapting `userscript_name` to the script name (`00-nvidiaDev.sh` uses this feature and stores its environment variables in `/tmp/comfy_00-nvidiaDev_env.txt`)
 - The scripts will be run BEFORE the user script (`user_script.bash` if any). Those scripts should not start ComfyUI.
-- See the example scripts for details of what can be done.
+- See the existing scripts for details of what can be done.
 
 ### 5.3.4. /comfyui-nvidia_config.sh
 
@@ -985,6 +992,7 @@ Once you are confident that you have migrated content from the old container's f
 
 # 7. Changelog
 
+- 20251005: Fix loading configuration file overrides (e.g. `comfyui-nvidia_config.sh`) + extended `userscripts_dir` to support Nunchaku and xformers.
 - 20251001: Added additional libraries to the base image to support a few custom nodes + new userscripts_dir script for onnxruntime + added Tailscale Docker Compose usage.
 - 20250817: Added automatic PyTorch selection for `PREINSTALL_TORCH` environment variable based on CUDA version + added `DISABLE_UPGRADES` and `PREINSTALL_TORCH_CMD` environment variables.
 - 20250713: Attempting to automatically select the `cu128` index-url when CUDA 12.8 (or above) is detected when using the `PREINSTALL_TORCH` environment variable (enabled by default).
