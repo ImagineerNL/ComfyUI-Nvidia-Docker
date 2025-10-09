@@ -55,12 +55,14 @@ if [ ! -d $itdir ]; then mkdir $itdir; chmod 777 $itdir; fi
 if [ ! -d $itdir ]; then error_exit "Failed to create $itdir"; fi
 
 # Set user and group id
+# logic: if not set and file exists, use file value, else use default. Create file for persistence when the container is re-run
+# reasoning: needed when using docker compose as the file will exist in the stopped container, and changing the value from environment variables or configuration file must be propagated from comfytoo to comfytoo transition (those values are the only ones loaded before the environment variables dump file are loaded)
 it=$itdir/comfy_user_uid
 if [ -z "${WANTED_UID+x}" ]; then
   if [ -f $it ]; then WANTED_UID=$(cat $it); fi
 fi
 WANTED_UID=${WANTED_UID:-1024}
-if [ ! -f $it ]; then write_worldtmpfile $it "$WANTED_UID"; fi
+write_worldtmpfile $it "$WANTED_UID"
 echo "-- WANTED_UID: \"${WANTED_UID}\""
 
 it=$itdir/comfy_user_gid
@@ -68,7 +70,7 @@ if [ -z "${WANTED_GID+x}" ]; then
   if [ -f $it ]; then WANTED_GID=$(cat $it); fi
 fi
 WANTED_GID=${WANTED_GID:-1024}
-if [ ! -f $it ]; then write_worldtmpfile $it "$WANTED_GID"; fi
+write_worldtmpfile $it "$WANTED_GID"
 echo "-- WANTED_GID: \"${WANTED_GID}\""
 
 # Set security level
@@ -77,7 +79,7 @@ if [ -z "${SECURITY_LEVEL+x}" ]; then
   if [ -f $it ]; then SECURITY_LEVEL=$(cat $it); fi
 fi
 SECURITY_LEVEL=${SECURITY_LEVEL:-"normal"}
-if [ ! -f $it ]; then write_worldtmpfile $it "$SECURITY_LEVEL"; fi
+write_worldtmpfile $it "$SECURITY_LEVEL"
 echo "-- SECURITY_LEVEL: \"${SECURITY_LEVEL}\""
 
 # Set base directory (if not used, set to $ignore_value)
@@ -86,7 +88,7 @@ if [ -z "${BASE_DIRECTORY+x}" ]; then
   if [ -f $it ]; then BASE_DIRECTORY=$(cat $it); fi
 fi
 BASE_DIRECTORY=${BASE_DIRECTORY:-"$ignore_value"}
-if [ ! -f $it ]; then write_worldtmpfile $it "$BASE_DIRECTORY"; fi
+write_worldtmpfile $it "$BASE_DIRECTORY"
 echo "-- BASE_DIRECTORY: \"${BASE_DIRECTORY}\""
 
 # Validate base directory
