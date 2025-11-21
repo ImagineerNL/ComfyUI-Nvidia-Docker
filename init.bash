@@ -181,12 +181,15 @@ load_env() {
   fi
 }
 
+lc() { echo "$1" | tr '[:upper:]' '[:lower:]'; }
+FORCE_CHOWN=${FORCE_CHOWN:-"false"} # any value works, empty value or false means disabled
+FORCE_CHOWN=`lc "A${FORCE_CHOWN}"`
+
 # comfytoo is a specfiic user not existing by default on ubuntu, we can check its whomai
 if [ "A${whoami}" == "Acomfytoo" ]; then 
   echo "-- Running as comfytoo, will switch comfy to the desired UID/GID"
   # The script is started as comfytoo -- UID/GID 1025/1025
-
-  FORCE_CHOWN=${FORCE_CHOWN:-"false"} # any value works, empty value or false means disabled
+  
   if [ "A${FORCE_CHOWN}" != "Afalse" ]; then
     echo "-- Force chown mode enabled, will force change directory ownership as comfy user during script rerun (might be slow)"
     sudo touch /etc/comfy_force_chown
@@ -237,12 +240,12 @@ fi
 
 # Default behavior: listen on 0.0.0.0
 USE_SOCAT=${USE_SOCAT:-"false"}
+USE_SOCAT=`lc "A${USE_SOCAT}"`
 if [ "A${USE_SOCAT}" == "Atrue" ]; then
   LISTEN_ADDRESS="127.0.0.1"
   LISTEN_PORT="8181"
   echo "== Using alternate behavior: socat listens on 0.0.0.0:8188 -> forward to ComfyUI on ${LISTEN_ADDRESS}:${LISTEN_PORT}"
 else
-  USE_SOCAT="false"
   LISTEN_ADDRESS="0.0.0.0"
   LISTEN_PORT="8188"
   echo "== Using default behavior: ComfyUI listens on ${LISTEN_ADDRESS}:${LISTEN_PORT}"
@@ -265,6 +268,7 @@ echo "-- COMFY_CMDLINE_EXTRA: \"${COMFY_CMDLINE_EXTRA}\""
 
 
 DISABLE_UPGRADES=${DISABLE_UPGRADES:-"false"}
+DISABLE_UPGRADES=`lc "A${DISABLE_UPGRADES}"`
 if [ "A${DISABLE_UPGRADES}" == "Atrue" ]; then
   echo "== Using alternate behavior: Disabling upgrade (including disabling USE_PIPUPGRADE)"
   USE_PIPUPGRADE="false"
@@ -272,7 +276,24 @@ else
   echo "== Using default behavior: Enabling upgrades (behavior depends on USE_PIPUPGRADE)"
 fi
 
+## uv setup
+USE_UV=${USE_UV:-"false"}
+USE_UV=`lc "A${USE_UV}"`
+if [ "A${USE_UV}" == "Atrue" ]; then
+  echo "== Installing uv"
+  wget https://astral.sh/uv/install.sh -O /tmp/uv-installer.sh \
+    && sh /tmp/uv-installer.sh \
+    && rm /tmp/uv-installer.sh
+  export PATH="/home/comfy/.local/bin/:$PATH"
+  echo "  == Verify that python3 and uv are installed";
+  echo "  - python3: "; which python3
+  echo "    version: "; python3 --version
+  echo "  -      uv: "; which uv
+  echo "    version: "; uv --version
+fi
+
 USE_PIPUPGRADE=${USE_PIPUPGRADE:-"true"}
+USE_PIPUPGRADE=`lc "A${USE_PIPUPGRADE}"`
 DEFAULT_PIP3_CMD="pip3 install --trusted-host pypi.org --trusted-host files.pythonhosted.org"
 if [ "A${USE_PIPUPGRADE}" == "Atrue" ]; then
   PIP3_CMD="${DEFAULT_PIP3_CMD} --upgrade"
@@ -280,6 +301,25 @@ else
   PIP3_CMD="${DEFAULT_PIP3_CMD}"
 fi
 echo "== PIP3_CMD: \"${PIP3_CMD}\""
+echo "== USE_UV: \"${USE_UV}\""
+
+# Define a wrapper function to handle USE_UV
+pip_install() {
+  if [ "A${USE_UV}" == "Atrue" ]; then
+    # Check if uv is actually installed
+    if command -v uv &> /dev/null; then
+      # uv pip install works inside the activated venv automatically
+      # We pass all arguments ($@) to uv
+      echo " [uv] Installing: $*"
+      uv ${PIP3_CMD} "$@"
+    else
+      echo "!! USE_UV=True but 'uv' not found. Falling back to pip3."
+      ${PIP3_CMD} "$@"
+    fi
+  else
+    ${PIP3_CMD} "$@"
+  fi
+}
 
 ########## ComfyUI specific section below
 
@@ -382,7 +422,7 @@ if [ ! -z "$BASE_DIRECTORY" ]; then
 fi
 
 ##
-echo ""; echo "== Validate/Create HugginFace directory"
+echo ""; echo "== Validate/Create HuggingFace directory"
 it_dir="${COMFYUSER_DIR}/mnt/HF"
 if [ ! -d "${it_dir}" ]; then
   echo "";echo "== Creating HF directory"
@@ -409,7 +449,7 @@ fi
 
 ##
 echo ""; echo "== Matching any existing venv to container's BUILD_BASE (${BUILD_BASE})"
-SWITCHED_VENV=True # this is a marker to indicate that we have switched to a different venv, which is set unless we re-use the same venv as before (see below)
+SWITCHED_VENV=true # this is a marker to indicate that we have switched to a different venv, which is set unless we re-use the same venv as before (see below)
 # Check for an existing venv; if present, is it the proper one -- ie does its .build_base.txt match the container's BUILD_BASE_FILE?
 if [ -d venv ]; then
   it=venv/.build_base.txt
@@ -418,7 +458,7 @@ if [ -d venv ]; then
   echo ""
   if cmp --silent $it $BUILD_BASE_FILE; then
     echo "== venv is for this BUILD_BASE (${BUILD_BASE})"
-    SWITCHED_VENV=False
+    SWITCHED_VENV=false
   else
     echo "== venv ($venv_bb) is not for this BUILD_BASE (${BUILD_BASE}), renaming it and seeing if a valid one is present"
     mv venv venv-${venv_bb} || error_exit "Failed to rename venv to venv-${venv_bb}"
@@ -452,7 +492,7 @@ echo ""; echo "  == Activating virtualenv"
 source "$it" || error_exit "Virtualenv activation failed"
 if [ "A${DISABLE_UPGRADES}" != "Atrue" ]; then
   echo ""; echo "  == Upgrading pip"
-  pip3 install --upgrade pip || error_exit "Pip upgrade failed"
+  pip_install pip || error_exit "Pip upgrade failed"
 fi
 
 # extent the PATH to include the user local bin directory
@@ -467,6 +507,7 @@ echo -n "  Pip version: "; pip3 --version
 echo -n "  python bin: "; which python3
 echo -n "  pip bin: "; which pip3
 echo -n "  git bin: "; which git
+if [ "$USE_UV" == "true" ]; then echo -n "  uv bin: "; which uv; fi
 echo "  PIP3_CMD: ${PIP3_CMD}"
 echo -n "  DISABLE_UPGRADES: "; echo ${DISABLE_UPGRADES}
 echo -n "  USE_PIPUPGRADE: "; echo ${USE_PIPUPGRADE}
@@ -533,17 +574,17 @@ else
         if [ "$cuda_minor" -lt 6 ]; then # CUDA 12.4
           echo "== Will be installing torch 2.6.0 for CUDA 12.4, disabling upgrade for pip3 if enabled to avoid overwriting torch"
           PIP3_CMD="${DEFAULT_PIP3_CMD}"
-          echo "== PIP3_CMD: \"${PIP3_CMD}\""
-          it="${PIP3_CMD} torch==2.6.0 torchvision==0.21.0 torchaudio==2.6.0 --index-url https://download.pytorch.org/whl/cu124"
+          echo "== updated PIP3_CMD: \"${PIP3_CMD}\""
+          it="torch==2.6.0 torchvision==0.21.0 torchaudio==2.6.0 --index-url https://download.pytorch.org/whl/cu124"
         elif [ "$cuda_minor" -lt 8 ]; then # CUDA 12.6
-          it="${PIP3_CMD} torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu126"
+          it="torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu126"
         else # CUDA 12.8
-          it="${PIP3_CMD} torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128"
+          it="torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128"
         fi
       fi
     fi
-    echo "Running: ${it}"
-    ${it} || error_exit "Torch installation failed"
+    echo "Installing: ${it}"
+    pip_install ${it} || error_exit "Torch installation failed"
   fi
 fi
 
@@ -554,7 +595,7 @@ if [ "A${DISABLE_UPGRADES}" == "Atrue" ]; then
   echo "== ComfyUI requirements upgrade disabled by DISABLE_UPGRADES"
 else
   echo ""; echo "== Installing/Updating from ComfyUI's requirements"
-  ${PIP3_CMD} -r $it || error_exit "ComfyUI requirements install/upgrade failed"
+  pip_install -r $it || error_exit "ComfyUI requirements install/upgrade failed"
 fi
 
 # Install Huggingface Hub
@@ -562,7 +603,7 @@ if [ "A${DISABLE_UPGRADES}" == "Atrue" ]; then
   echo "== Huggingface Hub upgrade disabled by DISABLE_UPGRADES"
 else
   echo ""; echo "== Installing Huggingface Hub"
-  ${PIP3_CMD} "huggingface_hub[cli]" || error_exit "HuggingFace Hub CLI install/upgrade failed"
+  pip_install "huggingface_hub[cli]" || error_exit "HuggingFace Hub CLI install/upgrade failed"
 fi
 
 export COMFYUI_PATH=`pwd`
@@ -577,14 +618,14 @@ if [ ! -d ComfyUI-Manager ]; then
   echo "== Cloning ComfyUI-Manager (within ${customnodes_dir})"
   git clone https://github.com/ltdrdata/ComfyUI-Manager.git || error_exit "ComfyUI-Manager clone failed"
   echo "== Installing ComfyUI-Manager's requirements (from ${customnodes_dir}/ComfyUI-Manager/requirements.txt)"
-  ${PIP3_CMD} -r ${customnodes_dir}/ComfyUI-Manager/requirements.txt || error_exit "ComfyUI-Manager CLI requirements installation failed" 
+  pip_install -r ${customnodes_dir}/ComfyUI-Manager/requirements.txt || error_exit "ComfyUI-Manager CLI requirements installation failed" 
 fi
 if [ ! -d ComfyUI-Manager ]; then error_exit "ComfyUI-Manager not found"; fi
 if [ "A${DISABLE_UPGRADES}" == "Atrue" ]; then
   echo "== ComfyUI-Manager packages upgrade disabled by DISABLE_UPGRADES"
 else
   echo "== Installing/Updating ComfyUI-Manager's requirements (from ${customnodes_dir}/ComfyUI-Manager/requirements.txt)"
-  ${PIP3_CMD} -r ${customnodes_dir}/ComfyUI-Manager/requirements.txt || error_exit "ComfyUI-Manager CLI requirements install/upgrade failed" 
+  pip_install -r ${customnodes_dir}/ComfyUI-Manager/requirements.txt || error_exit "ComfyUI-Manager CLI requirements install/upgrade failed" 
 fi
 
 # Please see https://github.com/ltdrdata/ComfyUI-Manager?tab=readme-ov-file#security-policy for details on authorized values
@@ -598,14 +639,21 @@ if [ ! -f $cm_conf ]; then
   echo "== ComfyUI-Manager $cm_conf file missing, script potentially never run before. You will need to run ComfyUI-Manager a first time for the configuration file to be generated, we can not attempt to update its security level yet -- if this keeps occurring, please let the developer know so he can investigate. Thank you"
 else
   echo "  -- Using ComfyUI-Manager config file: $cm_conf"
-  perl -p -i -e 's%security_level = \w+%security_level = '${SECURITY_LEVEL}'%g' $cm_conf
+  # SECURITY_LEVEL
+  perl -p -i -e 's%security_level\s*=\s*\w+%security_level = '${SECURITY_LEVEL}'%g' $cm_conf
   echo -n "  -- ComfyUI-Manager (should show: ${SECURITY_LEVEL}): "
   grep security_level $cm_conf
+  # USE_UV
+  W_UV="False"; if [ "A${USE_UV}" == "Atrue" ]; then W_UV="True"; fi
+  perl -p -i -e 's%use_uv\s*=\s*\w+%use_uv = '${W_UV}'%g' $cm_conf
+  echo -n "  -- ComfyUI-Manager (should show: ${W_UV}): "
+  grep use_uv $cm_conf
 fi
 
 # Attempt to use ComfyUI Manager CLI to fix all installed nodes -- This must be done within the activated virtualenv
 echo ""
-if [ "A${SWITCHED_VENV}" == "AFalse" ]; then
+echo "== SWITCHED_VENV: ${SWITCHED_VENV}"
+if [ "A${SWITCHED_VENV}" == "Afalse" ]; then
   echo "== Skipping ComfyUI-Manager CLI fix as we are re-using the same venv as the last execution"
   echo "  -- If you are experiencing issues with custom nodes, use 'Manager -> Custom Nodes Manager -> Filter: Import Failed -> Try Fix' from the WebUI"
 else 
@@ -683,6 +731,14 @@ if [ ! -z "$BASE_DIRECTORY" ]; then
     dir_validate "$it"
     it=${it}/.testfile && rm -f $it || error_exit "Failed to write to $it"
   done
+
+  # Re-Create the ComfyUI/user folder if it does not exist, so the comfyui.db can be placeed there (needed until BASEDIR is supported)
+  # per https://github.com/mmartial/ComfyUI-Nvidia-Docker/issues/81
+  it=${COMFYUI_PATH}/user
+  if [ ! -d $it ]; then
+    echo "  ++ Creating $it"
+    mkdir -p $it || error_exit "Failed to create $it"
+  fi
 
   # and extend the command line using COMFY_CMDLINE_EXTRA (export to be accessible to child processes such as the user script)
   export COMFY_CMDLINE_EXTRA="${COMFY_CMDLINE_EXTRA} --base-directory $BASE_DIRECTORY"
