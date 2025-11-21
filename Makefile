@@ -5,7 +5,7 @@ DOCKER_CMD=docker
 DOCKER_PRE="NVIDIA_VISIBLE_DEVICES=all"
 DOCKER_BUILD_ARGS=
 
-COMFYUI_NVIDIA_DOCKER_VERSION=20251006
+COMFYUI_NVIDIA_DOCKER_VERSION=20251122
 
 COMFYUI_CONTAINER_NAME=comfyui-nvidia-docker
 
@@ -43,6 +43,7 @@ ${DOCKER_ALL}: ${DOCKERFILE_DIR}
 	@echo "  -f ${DOCKERFILE_NAME} \\" >> ${VAR_NT}.cmd
 	@echo "  --load \\" >> ${VAR_NT}.cmd
 	@echo "  ." >> ${VAR_NT}.cmd
+	@echo "docker buildx use default" >> ${VAR_NT}.cmd
 	@cat ${VAR_NT}.cmd | tee ${VAR_NT}.log.temp
 	@echo "" | tee -a ${VAR_NT}.log.temp
 	@echo "Press Ctl+c within 5 seconds to cancel"
