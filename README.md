@@ -149,11 +149,12 @@ It is recommended that a container monitoring tool be available to watch the log
     - [5.4.2. COMFY\_CMDLINE\_BASE and COMFY\_CMDLINE\_EXTRA](#542-comfy_cmdline_base-and-comfy_cmdline_extra)
     - [5.4.3. BASE\_DIRECTORY](#543-base_directory)
     - [5.4.4. SECURITY\_LEVEL](#544-security_level)
-    - [5.4.5. USE\_SOCAT](#545-use_socat)
-    - [5.4.6. FORCE\_CHOWN](#546-force_chown)
-    - [5.4.7. USE\_PIPUPGRADE](#547-use_pipupgrade)
-    - [5.4.8. DISABLE\_UPGRADES](#548-disable_upgrades)
-    - [5.4.9. PREINSTALL\_TORCH and PREINSTALL\_TORCH\_CMD](#549-preinstall_torch-and-preinstall_torch_cmd)
+    - [5.4.5. USE\_UV](#545-use_uv)
+    - [5.4.6. USE\_SOCAT](#546-use_socat)
+    - [5.4.7. FORCE\_CHOWN](#547-force_chown)
+    - [5.4.8. USE\_PIPUPGRADE](#548-use_pipupgrade)
+    - [5.4.9. DISABLE\_UPGRADES](#549-disable_upgrades)
+    - [5.4.10. PREINSTALL\_TORCH and PREINSTALL\_TORCH\_CMD](#5410-preinstall_torch-and-preinstall_torch_cmd)
   - [5.5. ComfyUI Manager \& Security levels](#55-comfyui-manager--security-levels)
   - [5.6. Shell within the Docker image](#56-shell-within-the-docker-image)
     - [5.6.1. Alternate method](#561-alternate-method)
@@ -623,7 +624,19 @@ When following the rules defined at https://github.com/ltdrdata/ComfyUI-Manager?
 You will prefer ' weak ' if you manually install or alter custom nodes.
 **WARNING: Using `normal-` will prevent access to the WebUI unless the USE_SOCAT environment variable is set to `true`.**
 
-### 5.4.5. USE_SOCAT
+### 5.4.5. USE_UV
+
+The `USE_UV` environment variable is used to enable the use of `uv` instead of `pip`.
+
+[`uv`](https://docs.astral.sh/uv/) is a fast, all-in-one Python package & project manager written in Rust. It aims to replace a whole stack of python tools with a single binary that is faster than pip in many cases.
+
+`uv` is also supported by ComfyUI Manager natively when the `use_uv` option is set to `true` in the `basedir/user/default/ComfyUI-Manager/config.ini` file. 
+We will attempt to set it to the value of the `USE_UV` environment variable. Similar to `SECURITY_LEVEL`, it will be required to `Restart` ComfyUI to apply the change.
+
+It is currently not set to `true` by default.
+It is recommended to set `USE_UV=true` as it make the container start faster and allow for a simpler nodes installation process.
+
+### 5.4.6. USE_SOCAT
 
 The `USE_SOCAT` environment variable is used to enable an alternate service behavior: have ComfyUI listen on `127.0.0.1:8181` and use `socat` to expose the service on `0.0.0.0:8188`.
 
@@ -631,7 +644,7 @@ The default is to run ComfyUI within the container to listen on `0.0.0.0:8188` (
 
 Some `SECURITY_LEVEL` settings might prevent access to the WebUI unless the tool is running on `127.0.0.1` (i.e., only the host). The `USE_SOCAT=true` environment variable can be used to support this behavior.
 
-### 5.4.6. FORCE_CHOWN
+### 5.4.7. FORCE_CHOWN
 
 The `FORCE_CHOWN` environment variable is used to force change directory ownership as the `comfy` user during script startup (this process might be slow).
 
@@ -641,7 +654,7 @@ When set with any non empty value other than `false`, `FORCE_CHOWN` will be enab
 
 When set, it will "force chown" every sub-folder in the `run` and `basedir` folders when it first attempt to access them before verifying they are owned by the proper user.
 
-### 5.4.7. USE_PIPUPGRADE
+### 5.4.8. USE_PIPUPGRADE
 
 The `USE_PIPUPGRADE` environment variable is used to enable the use of `pip3 install --upgrade` to upgrade ComfyUI and other Python packages to the latest version during startup. If not set, it will use `pip3 install` to install packages.
 
@@ -649,7 +662,7 @@ This option is enabled by default as with the sepraation of the UI from the Core
 
 It can be disabled by setting `USE_PIPUPGRADE=false`.
 
-### 5.4.8. DISABLE_UPGRADES
+### 5.4.9. DISABLE_UPGRADES
 
 The `DISABLE_UPGRADES` environment variable is used to disable upgrades when starting the container (also disables `USE_PIPUPGRADE` and `PREINSTALL_TORCH`).
 
@@ -657,7 +670,7 @@ This option is disabled by default (set to `false`) as it is recommended to keep
 
 It is recommended to only use it on an installation after its initial setup (especially if you plan to use `PREINSTALL_TORCH`: it will bypass this step as well), as it will attempt to prevent Comfy and other Python packages from being upgraded outside of the WebUI. Any package update will have to be performed through the WebUI (ComfyUI Manager).
 
-### 5.4.9. PREINSTALL_TORCH and PREINSTALL_TORCH_CMD
+### 5.4.10. PREINSTALL_TORCH and PREINSTALL_TORCH_CMD
 
 The `PREINSTALL_TORCH` environment variable will attempt to automatically install/upgrade `torch` after the virtual environment is created.
 
@@ -1002,6 +1015,7 @@ Once you are confident that you have migrated content from the old container's f
 
 # 7. Changelog
 
+- 20251122: Added `USE_UV` environment variable to enable the use of `uv` instead of `pip` (not enabled by default) + updated some `userscripts_dir` to support `uv` + fix `config.ini` alterations in non-alphanumeric entries + attempt to fix the DB initialization issue (reported in [Issue 81](https://github.com/mmartial/ComfyUI-Nvidia-Docker/issues/81))
 - 20251006: Fix environment variable loading (side effect of fix for loading configuration file overrides, as reported in [Issue 78](https://github.com/mmartial/ComfyUI-Nvidia-Docker/issues/78))
 - 20251005: Fix loading configuration file overrides (e.g. `comfyui-nvidia_config.sh`) + extended `userscripts_dir` to support Nunchaku and xformers.
 - 20251001: Added additional libraries to the base image to support a few custom nodes + new userscripts_dir script for onnxruntime + added Tailscale Docker Compose usage.
