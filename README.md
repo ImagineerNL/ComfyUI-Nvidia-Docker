@@ -258,6 +258,9 @@ In the directory where you want to run the compose stack, create the `compose.ya
 
 This will use port 8188 (`host:container`). Use a `run` directory local to the directory where this `compose.yml` is, and specify the `WANTED_UID` and `WANTED_GID` to 1000 (adapt to reflect the user and group you want to run as, which can be obtained using the `id` command in a terminal). Make sure to create the `run` and `basedir` directories as the user with the desired uid and gid before running the docker-compose for the first time.
 
+The `compose.yaml` also include an `extra_hosts` section to detail capability to set a custom host name to point to external IP for inclusiom with specific nodes (such as the Ollama node; instead of embedding the IP in the node configuration, we can use a custom host name). 
+Similarly, environment variables will be passed to the running container. If you need to pass an API key or a token to the container, add it in the `environment:` section for example `- HF_TOKEN=${HF_TOKEN}` and add an `HF_TOKEN=hf...` in the `.env` file in the same directory as the `compose.yaml` file. 
+
 Start it with `docker compose up` (with `-detached` to run the container in the background)
 
 Please see [docker compose up](https://docs.docker.com/reference/cli/docker/compose/up/) reference manual for additional details.
