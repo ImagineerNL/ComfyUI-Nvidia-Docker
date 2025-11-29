@@ -557,22 +557,40 @@ else
     # Allow the override of the torch installation command
     if [ ! -z "${PREINSTALL_TORCH_CMD+x}" ]; then
       it="${PREINSTALL_TORCH_CMD}"
+      # fix: recommendation was to use "pip3 install ..." must remove "pip3 install" from the command
+      it=${it//pip3 install/}
     else
-      it="${PIP3_CMD} torch torchvision torchaudio"
+      torch_version="torch torchvision torchaudio"
+      # Determine CUDA backend based on version
       if [ "$cuda_major" -lt 13 ]; then
-      # https://pytorch.org/get-started/previous-versions/
         if [ "$cuda_minor" -lt 6 ]; then # CUDA 12.4
-          echo "== Will be installing torch 2.6.0 for CUDA 12.4, disabling upgrade for pip3 if enabled to avoid overwriting torch"
+          echo "== Will be installing torch for CUDA 12.4, disabling upgrade for pip3 if enabled to avoid overwriting torch"
           PIP3_CMD="${DEFAULT_PIP3_CMD}"
           echo "== updated PIP3_CMD: \"${PIP3_CMD}\""
-          it="torch==2.6.0 torchvision==0.21.0 torchaudio==2.6.0 --index-url https://download.pytorch.org/whl/cu124"
+          cuda_backend="cu124"
+          torch_version="torch==2.6.0 torchvision==0.21.0 torchaudio==2.6.0"
         elif [ "$cuda_minor" -lt 8 ]; then # CUDA 12.6
-          it="torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu126"
+          cuda_backend="cu126"
         else # CUDA 12.8
-          it="torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128"
+          cuda_backend="cu128"
         fi
+      else # CUDA 13.0+
+        cuda_backend="cu130"
       fi
+
+      # Apply backend to either UV or pip
+      if [ "A${USE_UV}" == "Atrue" ]; then
+        export UV_TORCH_BACKEND="${cuda_backend}"
+        it="${torch_version}"
+      else
+        it="${torch_version} --index-url https://download.pytorch.org/whl/${cuda_backend}"
+      fi
+
+    if [ "A${USE_UV}" == "Atrue" ]; then
+      if [ ! ${UV_TORCH_BACKEND+x} ]; then error_exit "UV_TORCH_BACKEND is not set"; fi
+      echo "== Installing torch using uv with backend: ${UV_TORCH_BACKEND}"
     fi
+
     echo "Installing: ${it}"
     ${PIP3_CMD} ${it} || error_exit "Torch installation failed"
   fi
