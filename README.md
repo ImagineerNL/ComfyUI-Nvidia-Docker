@@ -92,7 +92,7 @@ If this version is incompatible with your container runtime, please see the list
 | ubuntu24_cuda12.6.3-latest | `latest` | `latest` as of `20250413` release |
 | ubuntu24_cuda12.8-latest | | minimum required for Blackwell (inc RTX 50xx) hardware (see "Blackwell support" section) |
 | ubuntu24_cuda12.9-latest | | |
-| ubuntu24_cuda13.0-latest | | untested, 12.9 recommended |
+| ubuntu24_cuda13.0-latest | | |
 
 For more details on driver capabilities and how to update those, please see [Setting up NVIDIA docker & podman (Ubuntu 24.04)](https://www.gkr.one/blg-20240523-u24-nvidia-docker-podman).
 
@@ -174,6 +174,7 @@ It is recommended that a container monitoring tool be available to watch the log
   - [6.4. using BASE\_DIRECTORY with an outdated ComfyUI](#64-using-base_directory-with-an-outdated-comfyui)
     - [6.4.1. using a specific ComfyUI version or SHA](#641-using-a-specific-comfyui-version-or-sha)
     - [6.4.2. Errors with ComfyUI WebUI -- re-installation method with models migration](#642-errors-with-comfyui-webui----re-installation-method-with-models-migration)
+    - [6.4.3. Compatibility Warning: Frontend version ... is outdated](#643-compatibility-warning-frontend-version--is-outdated)
 - [7. Changelog](#7-changelog)
 
 # 1. Preamble
@@ -682,7 +683,7 @@ It will also check the version of CUDA supported by the container such that for 
 
 This option is enabled by default. It can be disabled by setting `PREINSTALL_TORCH=false`.
 
-The `PREINSTALL_TORCH_CMD` environment variable can be used to override the torch installation command with the one specified in the variable. For example for GTX 1080, try to use `PREINSTALL_TORCH_CMD="pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu126"`. It is likely also recommended to not set `USE_PIPUPGRADE=false` in this case.
+The `PREINSTALL_TORCH_CMD` environment variable can be used to override the torch installation command with the one specified in the variable. For example for GTX 1080, try to use `PREINSTALL_TORCH_CMD=pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu126`. It is likely also recommended to not set `USE_PIPUPGRADE=false` in this case.
 
 Please note that the `PREINSTALL_TORCH_CMD` variable is not added to the Unraid template, and must be manually added if used.
 
@@ -1016,6 +1017,16 @@ You will still have previous content in the `run_off` and `basedir_off` folders,
 From `run_off/custom_nodes`. you will be able to see the list of custom nodes that were installed in the old container and can decided to reinstall them from the manager.
 
 Once you are confident that you have migrated content from the old container's folders, you can delete the `run_off` and `basedir_off` folders.
+
+### 6.4.3. Compatibility Warning: Frontend version ... is outdated
+
+Some users have reported a warkaround for the issue if it appears:
+
+> update [the] frontend with the the command comfyui shows you when you start the container with an old frontend. You find the command in the container protocol. In my case the command is `/comfy/mnt/venv/bin/python3 -m pip install -r /comfy/mnt/ComfyUI/requirements.txt`
+> You can now start your container command line and just copy and paste this command. The frontend will be updaded and after a container restart you will have the new frontend.
+
+For more details, see [this thread on the Unraid forum](https://forums.unraid.net/topic/172874-support-comfyui-nvidia-docker/page/5/#findComment-1588490).
+
 
 # 7. Changelog
 
