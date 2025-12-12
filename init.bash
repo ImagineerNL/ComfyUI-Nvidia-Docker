@@ -656,13 +656,23 @@ fi
 
 # Please see https://github.com/ltdrdata/ComfyUI-Manager?tab=readme-ov-file#security-policy for details on authorized values
 # recent releases of ComfyUI-Manager have a config.ini file in the user folder, if this is not present, we expect it in the default folder
-cm_conf_user=${COMFYUI_PATH}/user/default/ComfyUI-Manager/config.ini
-cm_conf=${COMFYUI_PATH}/custom_nodes/ComfyUI-Manager/config.ini
-if [ ! -z "$BASE_DIRECTORY" ]; then it=${BASE_DIRECTORY}/user/default/ComfyUI-Manager/config.ini ; if [ -f $it ]; then cm_conf_user=$it; fi; fi
-if [ -f $cm_conf_user ]; then cm_conf=$cm_conf_user; fi
+# 3.38 new path: /basedir/user/__manager/config.ini
+cm_conf_candidates="user/__manager/config.ini user/default/ComfyUI-Manager/config.ini custom_nodes/ComfyUI-Manager/config.ini"
+cm_conf="NOT_FOUND"
+if [ ! -z "$BASE_DIRECTORY" ]; then
+  for it in $cm_conf_candidates; do
+    if [ -f $BASE_DIRECTORY/$it ]; then cm_conf=$BASE_DIRECTORY/$it; break; fi
+  done
+else
+  for it in $cm_conf_candidates; do
+    if [ -f ${COMFYUI_PATH}/$it ]; then cm_conf=${COMFYUI_PATH}/$it; break; fi
+  done
+fi
+echo ""
+echo "== ComfyUI-Manager config file: $cm_conf"
 echo ""
 if [ ! -f $cm_conf ]; then
-  echo "== ComfyUI-Manager $cm_conf file missing, script potentially never run before. You will need to run ComfyUI-Manager a first time for the configuration file to be generated, we can not attempt to update its security level yet -- if this keeps occurring, please let the developer know so he can investigate. Thank you"
+  echo "== ComfyUI-Manager $cm_conf not found-- script potentially never run before. You will need to run ComfyUI-Manager a first time for the configuration file to be generated, we can not attempt to update its security level yet -- if this keeps occurring, please let the developer know so he can investigate. Thank you"
 else
   echo "  -- Using ComfyUI-Manager config file: $cm_conf"
   # SECURITY_LEVEL
