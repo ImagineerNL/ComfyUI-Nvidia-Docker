@@ -82,6 +82,15 @@ SECURITY_LEVEL=${SECURITY_LEVEL:-"normal"}
 write_worldtmpfile $it "$SECURITY_LEVEL"
 echo "-- SECURITY_LEVEL: \"${SECURITY_LEVEL}\""
 
+# Set network mode
+it=$itdir/comfy_network_mode
+if [ -z "${NETWORK_MODE+x}" ]; then
+  if [ -f $it ]; then NETWORK_MODE=$(cat $it); fi
+fi
+NETWORK_MODE=${NETWORK_MODE:-"personal_cloud"}
+write_worldtmpfile $it "$NETWORK_MODE"
+echo "-- NETWORK_MODE: \"${NETWORK_MODE}\""
+
 # Set base directory (if not used, set to $ignore_value)
 it=$itdir/comfy_base_directory
 if [ -z "${BASE_DIRECTORY+x}" ]; then
@@ -635,23 +644,53 @@ fi
 export COMFYUI_PATH=`pwd`
 echo ""; echo "-- COMFYUI_PATH: ${COMFYUI_PATH}"
 
-# Install ComfyUI Manager if not already present
-echo ""
+USE_NEW_MANAGER=${USE_NEW_MANAGER:-"false"}
+
+# if the legacy manager is not installed, we will install the new manager instead
 customnodes_dir=${COMFYUI_PATH}/custom_nodes
 if [ ! -z "$BASE_DIRECTORY" ]; then it=${BASE_DIRECTORY}/custom_nodes; if [ -d $it ]; then customnodes_dir=$it; fi; fi
-cd ${customnodes_dir}
-if [ ! -d ComfyUI-Manager ]; then
-  echo "== Cloning ComfyUI-Manager (within ${customnodes_dir})"
-  git clone https://github.com/ltdrdata/ComfyUI-Manager.git || error_exit "ComfyUI-Manager clone failed"
-  echo "== Installing ComfyUI-Manager's requirements (from ${customnodes_dir}/ComfyUI-Manager/requirements.txt)"
-  ${PIP3_CMD} -r ${customnodes_dir}/ComfyUI-Manager/requirements.txt || error_exit "ComfyUI-Manager CLI requirements installation failed" 
+it="$it/ComfyUI-Manager"
+if [ ! -d "$it" ]; then
+  echo "!! Legacy ComfyUI Manager not found, using new ComfyUI Manager"
+  USE_NEW_MANAGER="true"
 fi
-if [ ! -d ComfyUI-Manager ]; then error_exit "ComfyUI-Manager not found"; fi
-if [ "A${DISABLE_UPGRADES}" == "Atrue" ]; then
-  echo "== ComfyUI-Manager packages upgrade disabled by DISABLE_UPGRADES"
-else
-  echo "== Installing/Updating ComfyUI-Manager's requirements (from ${customnodes_dir}/ComfyUI-Manager/requirements.txt)"
-  ${PIP3_CMD} -r ${customnodes_dir}/ComfyUI-Manager/requirements.txt || error_exit "ComfyUI-Manager CLI requirements install/upgrade failed" 
+
+# if the new manager is requested, install it
+# Per https://blog.comfy.org/p/meet-the-new-comfyui-manager the new one and old one can exist together
+if [ "A${USE_NEW_MANAGER}" == "Atrue" ]; then
+  echo "== Using new ComfyUI Manager"
+  it_dir="${COMFYUI_PATH}"
+  new_manager_requirements="$it_dir/manager_requirements.txt"
+  if [ ! -f $new_manager_requirements ]; then
+    echo "== ComfyUI Manager requirements not found, using legacy ComfyUI Manager"
+    USE_NEW_MANAGER="false"
+  else
+    echo "== Installing/Updating from ComfyUI Manager's requirements"
+    ${PIP3_CMD} -r $new_manager_requirements || error_exit "ComfyUI Manager requirements install/upgrade failed"
+  fi
+fi
+
+if [ "A${USE_NEW_MANAGER}" == "Afalse" ]; then
+  echo "== Using legacy ComfyUI Manager"
+
+  # Install ComfyUI Manager if not already present
+  echo ""
+  customnodes_dir=${COMFYUI_PATH}/custom_nodes
+  if [ ! -z "$BASE_DIRECTORY" ]; then it=${BASE_DIRECTORY}/custom_nodes; if [ -d $it ]; then customnodes_dir=$it; fi; fi
+  cd ${customnodes_dir}
+  if [ ! -d ComfyUI-Manager ]; then
+    echo "== Cloning ComfyUI-Manager (within ${customnodes_dir})"
+    git clone https://github.com/ltdrdata/ComfyUI-Manager.git || error_exit "ComfyUI-Manager clone failed"
+    echo "== Installing ComfyUI-Manager's requirements (from ${customnodes_dir}/ComfyUI-Manager/requirements.txt)"
+    ${PIP3_CMD} -r ${customnodes_dir}/ComfyUI-Manager/requirements.txt || error_exit "ComfyUI-Manager CLI requirements installation failed" 
+  fi
+  if [ ! -d ComfyUI-Manager ]; then error_exit "ComfyUI-Manager not found"; fi
+  if [ "A${DISABLE_UPGRADES}" == "Atrue" ]; then
+    echo "== ComfyUI-Manager packages upgrade disabled by DISABLE_UPGRADES"
+  else
+    echo "== Installing/Updating ComfyUI-Manager's requirements (from ${customnodes_dir}/ComfyUI-Manager/requirements.txt)"
+    ${PIP3_CMD} -r ${customnodes_dir}/ComfyUI-Manager/requirements.txt || error_exit "ComfyUI-Manager CLI requirements install/upgrade failed" 
+  fi
 fi
 
 # Please see https://github.com/ltdrdata/ComfyUI-Manager?tab=readme-ov-file#security-policy for details on authorized values
@@ -684,6 +723,10 @@ else
   perl -p -i -e 's%^use_uv\s*=.+$%use_uv = '${W_UV}'%g' $cm_conf
   echo -n "  -- ComfyUI-Manager (should show: ${W_UV}): "
   grep use_uv $cm_conf
+  # NETWORK_MODE=personal_cloud
+  perl -p -i -e 's%^network_mode\s*=.+$%network_mode = '${NETWORK_MODE}'%g' $cm_conf
+  echo -n "  -- ComfyUI-Manager (should show: ${NETWORK_MODE}): "
+  grep network_mode $cm_conf
 fi
 
 # Attempt to use ComfyUI Manager CLI to fix all installed nodes -- This must be done within the activated virtualenv
@@ -778,6 +821,19 @@ if [ ! -z "$BASE_DIRECTORY" ]; then
 
   # and extend the command line using COMFY_CMDLINE_EXTRA (export to be accessible to child processes such as the user script)
   export COMFY_CMDLINE_EXTRA="${COMFY_CMDLINE_EXTRA} --base-directory $BASE_DIRECTORY"
+  echo "!! COMFY_CMDLINE_EXTRA extended, make sure to use it in user script (if any): ${COMFY_CMDLINE_EXTRA}"
+fi
+
+if [ "A${USE_NEW_MANAGER}" == "Atrue" ]; then
+  echo "== Using new ComfyUI Manager's required command line addition: --enable-manager"
+  export COMFY_CMDLINE_EXTRA="${COMFY_CMDLINE_EXTRA} --enable-manager"
+  USE_LEGACY_UI=${USE_LEGACY_UI:-"false"}
+  # it is possible to keep the legacy UI while using the new manager
+  # per https://github.com/comfyanonymous/ComfyUI?tab=readme-ov-file#command-line-options
+  if [ "A${ENABLE_MANAGER_LEGACY_UI}" == "Atrue" ]; then
+    echo "== Enabling Manager's legacy UI"
+    export COMFY_CMDLINE_EXTRA="${COMFY_CMDLINE_EXTRA} --enable-manager-legacy-ui"
+  fi
   echo "!! COMFY_CMDLINE_EXTRA extended, make sure to use it in user script (if any): ${COMFY_CMDLINE_EXTRA}"
 fi
 

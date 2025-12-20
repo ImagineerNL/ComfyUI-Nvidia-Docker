@@ -1,11 +1,14 @@
 SHELL := /bin/bash
 .PHONY: all
 
+# Try to optimize caching for development
+RELEASE_BUILD=true
+
 DOCKER_CMD=docker
 DOCKER_PRE="NVIDIA_VISIBLE_DEVICES=all"
 DOCKER_BUILD_ARGS=
 
-COMFYUI_NVIDIA_DOCKER_VERSION=20251211
+COMFYUI_NVIDIA_DOCKER_VERSION=20251219
 
 COMFYUI_CONTAINER_NAME=comfyui-nvidia-docker
 
@@ -34,8 +37,12 @@ ${DOCKER_ALL}: ${DOCKERFILE_DIR}
 	@cat ${COMPONENTS_DIR}/part1-common.Dockerfile >> ${DOCKERFILE_NAME}
 	@$(eval VAR_NT="${COMFYUI_CONTAINER_NAME}-$@")
 	@echo "-- Docker command to be run:"
-	@echo "docker buildx ls | grep -q ${COMFYUI_CONTAINER_NAME} && echo \"builder already exists -- to delete it, use: docker buildx rm ${COMFYUI_CONTAINER_NAME}\" || docker buildx create --name ${COMFYUI_CONTAINER_NAME}"  > ${VAR_NT}.cmd
-	@echo "docker buildx use ${COMFYUI_CONTAINER_NAME} || exit 1" >> ${VAR_NT}.cmd
+	@if [ "${RELEASE_BUILD}" = "true" ]; then \
+	  echo "docker buildx ls | grep -q ${COMFYUI_CONTAINER_NAME} && echo \"builder already exists -- to delete it, use: docker buildx rm ${COMFYUI_CONTAINER_NAME}\" || docker buildx create --name ${COMFYUI_CONTAINER_NAME}"  > ${VAR_NT}.cmd; \
+	  echo "docker buildx use ${COMFYUI_CONTAINER_NAME} || exit 1" >> ${VAR_NT}.cmd; \
+	else \
+	  echo "docker buildx use default || exit 1" > ${VAR_NT}.cmd; \
+	fi
 	@echo "BUILDX_EXPERIMENTAL=1 ${DOCKER_PRE} docker buildx debug --on=error build --progress plain --platform linux/amd64 ${DOCKER_BUILD_ARGS} \\" >> ${VAR_NT}.cmd
 	@echo "  --build-arg COMFYUI_NVIDIA_DOCKER_VERSION=\"${COMFYUI_NVIDIA_DOCKER_VERSION}\" \\" >> ${VAR_NT}.cmd
 	@echo "  --build-arg BUILD_BASE=\"$@\" \\" >> ${VAR_NT}.cmd
