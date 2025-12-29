@@ -2,7 +2,7 @@
 
 # Install system packages
 ENV DEBIAN_FRONTEND=noninteractive
-RUN apt-get update -y --fix-missing\
+RUN apt-get update -y --fix-missing \
   && apt-get install -y \
     apt-utils \
     locales \
@@ -18,7 +18,7 @@ ENV LC_ALL=C
 # Install needed packages
 RUN apt-get update -y --fix-missing \
   && apt-get upgrade -y \
-  && apt-get install -y \
+  && apt-get install -y --no-install-recommends \
     build-essential \
     python3-dev \
     unzip \
@@ -95,6 +95,9 @@ ENV NVIDIA_DRIVER_CAPABILITIES="all"
 ENV NVIDIA_VISIBLE_DEVICES=all
 
 EXPOSE 8188
+
+# Remove APT cache and proxy configuration
+RUN rm -rf /var/lib/apt/lists/* /etc/apt/apt.conf.d/01proxy
 
 ARG COMFYUI_NVIDIA_DOCKER_VERSION="unknown"
 LABEL comfyui-nvidia-docker-build=${COMFYUI_NVIDIA_DOCKER_VERSION}
