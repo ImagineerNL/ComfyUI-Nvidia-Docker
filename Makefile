@@ -1,18 +1,22 @@
+ifneq (,$(wildcard .env))
+	include .env
+	export $(shell sed -n 's/^\([A-Za-z_][A-Za-z0-9_]*\)=.*/\1/p' .env)
+endif
+
 SHELL := /bin/bash
-.PHONY: all
+.PHONY: all build build-dgx clean docker_tag_list docker_buildx_rm docker_rmi docker_tag docker_push docker_rmi docker_rmi_hub docker_tag_list userscripts
 
 # Try to optimize caching for development
 RELEASE_BUILD=true
 # apt-cacher-ng proxy
 # APT Cache: HTTP only, most content from Ubuntu will work, limit download of common packages between images/builds
-BUILD_APT_PROXY=
-#BUILD_APT_PROXY=http://10.0.0.15:3142
+BUILD_APT_PROXY ?=
 
 DOCKER_CMD=docker
 DOCKER_PRE="NVIDIA_VISIBLE_DEVICES=all"
 DOCKER_BUILD_ARGS=
 
-COMFYUI_NVIDIA_DOCKER_VERSION=20251229
+COMFYUI_NVIDIA_DOCKER_VERSION=20251230
 DEFAULT_PLATFORM=linux/amd64
 DEFAULT_ARCH=x86_64
 DGX_PLATFORM=linux/arm64
@@ -168,7 +172,6 @@ userscripts:
 #   % make docker_push
 # - Update the userscripts archive
 #   % make userscripts
-# - disable the BUILD_APT_PROXY variable in the Makefile
 # - Update the README.md file with the new release tag + version history
 # - Commit and push the changes to GitHub (in the branch created at the beginning)
 # - On Github, "Open a pull request",
