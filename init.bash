@@ -394,12 +394,13 @@ echo "== PIP3_CMD: \"${PIP3_CMD}\""
 
 
 ##
+COMFY_REPO_URL="https://github.com/Comfy-Org/ComfyUI.git"
 it_dir="${COMFYUSER_DIR}/mnt"
 echo ""; echo "== Obtaining the latest version of ComfyUI (if folder not present)"
 cd $it_dir # ${COMFYUSER_DIR}/mnt -- stay here for the following checks/setups
 if [ ! -d "ComfyUI" ]; then
   echo ""; echo "== Cloning ComfyUI"
-  git clone https://github.com/comfyanonymous/ComfyUI.git ComfyUI || error_exit "ComfyUI clone failed"
+  git clone ${COMFY_REPO_URL} ComfyUI || error_exit "ComfyUI clone failed"
   if [ "$A{DISABLE_UPGRADES}" == "Atrue" ]; then
     echo ""; echo "== This is a new installation, setting DISABLE_UPGRADES to false"
     DISABLE_UPGRADES=false
@@ -411,6 +412,17 @@ echo ""; echo "== Confirm the ComfyUI directory is present and we can write to i
 it_dir="${COMFYUSER_DIR}/mnt/ComfyUI"
 dir_validate "${it_dir}" 
 it="${it_dir}/.testfile"; touch $it && rm -f $it || error_exit "Failed to write to ComfyUI directory as the comfy user"
+
+# Check that ComfyUI's remote is set to the correct one
+cdir="$(pwd)"
+cd "${it_dir}"
+if [ "$(git remote get-url origin)" != "${COMFY_REPO_URL}" ]; then
+  echo ""; echo "== ComfyUI's remote is not set to the correct one, updating to ${COMFY_REPO_URL}"
+  git remote set-url origin "${COMFY_REPO_URL}"
+fi
+echo -n "== ComfyUI origin set to: "; git remote get-url origin
+echo "   Expected: ${COMFY_REPO_URL}"
+cd "${cdir}"
 
 ##
 echo ""; echo "== Check on BASE_DIRECTORY (if used / if using \"$ignore_value\" then disable it)"

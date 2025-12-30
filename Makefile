@@ -3,14 +3,20 @@ SHELL := /bin/bash
 
 # Try to optimize caching for development
 RELEASE_BUILD=true
+# apt-cacher-ng proxy
+# APT Cache: HTTP only, most content from Ubuntu will work, limit download of common packages between images/builds
+BUILD_APT_PROXY=
+#BUILD_APT_PROXY=http://10.0.0.15:3142
 
 DOCKER_CMD=docker
 DOCKER_PRE="NVIDIA_VISIBLE_DEVICES=all"
 DOCKER_BUILD_ARGS=
 
-COMFYUI_NVIDIA_DOCKER_VERSION=20251228
+COMFYUI_NVIDIA_DOCKER_VERSION=20251229
 DEFAULT_PLATFORM=linux/amd64
+DEFAULT_ARCH=x86_64
 DGX_PLATFORM=linux/arm64
+DGX_ARCH=arm64
 
 COMFYUI_CONTAINER_NAME=comfyui-nvidia-docker
 
@@ -31,7 +37,7 @@ all:
 build: ${DOCKER_ALL}
 
 build-dgx:
-	@BUILD_PLATFORM=${DGX_PLATFORM} make ubuntu24_cuda13.0
+	@BUILD_PLATFORM=${DGX_PLATFORM} BUILD_ARCH=${DGX_ARCH} make ubuntu24_cuda13.0
 
 ${DOCKERFILE_DIR}:
 	@mkdir -p ${DOCKERFILE_DIR}
@@ -43,8 +49,13 @@ ${DOCKER_ALL}: ${DOCKERFILE_DIR}
 	@cat ${COMPONENTS_DIR}/part1-common.Dockerfile >> ${DOCKERFILE_NAME}
 	@$(eval VAR_NT="${COMFYUI_CONTAINER_NAME}-$@")
 	@echo "-- Docker command to be run:"
-	@if [ "${RELEASE_BUILD}" = "true" ]; then \
-		echo "docker buildx ls | grep -q ${COMFYUI_CONTAINER_NAME} && echo \"builder already exists -- to delete it, use: docker buildx rm ${COMFYUI_CONTAINER_NAME}\" || docker buildx create --name ${COMFYUI_CONTAINER_NAME}"  > ${VAR_NT}.cmd; \
+	@if [ "A${RELEASE_BUILD}" = "Atrue" ]; then \
+		if [ -f buildkitd.toml ]; then \
+			BUILDX_ADD="--driver docker-container --config ./buildkitd.toml"; \
+		else \
+			BUILDX_ADD=""; \
+		fi; \
+		echo "docker buildx ls | grep -q ${COMFYUI_CONTAINER_NAME} && echo \"builder already exists -- to delete it, use: docker buildx rm ${COMFYUI_CONTAINER_NAME}\" || docker buildx create --name ${COMFYUI_CONTAINER_NAME} $${BUILDX_ADD}"  > ${VAR_NT}.cmd; \
 		echo "docker buildx use ${COMFYUI_CONTAINER_NAME} || exit 1" >> ${VAR_NT}.cmd; \
 	else \
 		echo "docker buildx use default || exit 1" > ${VAR_NT}.cmd; \
@@ -52,6 +63,8 @@ ${DOCKER_ALL}: ${DOCKERFILE_DIR}
 	@echo "BUILDX_EXPERIMENTAL=1 ${DOCKER_PRE} docker buildx debug --on=error build --progress plain --platform $${BUILD_PLATFORM:-${DEFAULT_PLATFORM}} ${DOCKER_BUILD_ARGS} \\" >> ${VAR_NT}.cmd
 	@echo "  --build-arg COMFYUI_NVIDIA_DOCKER_VERSION=\"${COMFYUI_NVIDIA_DOCKER_VERSION}\" \\" >> ${VAR_NT}.cmd
 	@echo "  --build-arg BUILD_BASE=\"$@\" \\" >> ${VAR_NT}.cmd
+	@echo "  --build-arg BUILD_ARCH=\"$${BUILD_ARCH:-${DEFAULT_ARCH}}\" \\" >> ${VAR_NT}.cmd
+	@echo "  --build-arg BUILD_APT_PROXY=\"${BUILD_APT_PROXY}\" \\" >> ${VAR_NT}.cmd
 	@echo "  --tag=\"${COMFYUI_CONTAINER_NAME}:$@\" \\" >> ${VAR_NT}.cmd
 	@echo "  -f ${DOCKERFILE_NAME} \\" >> ${VAR_NT}.cmd
 	@echo "  --load \\" >> ${VAR_NT}.cmd
@@ -155,6 +168,7 @@ userscripts:
 #   % make docker_push
 # - Update the userscripts archive
 #   % make userscripts
+# - disable the BUILD_APT_PROXY variable in the Makefile
 # - Update the README.md file with the new release tag + version history
 # - Commit and push the changes to GitHub (in the branch created at the beginning)
 # - On Github, "Open a pull request",

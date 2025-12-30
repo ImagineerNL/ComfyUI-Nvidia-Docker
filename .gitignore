@@ -16,3 +16,5 @@ user/*
 
 run/*
 basedir/*
+
+buildkitd.toml
