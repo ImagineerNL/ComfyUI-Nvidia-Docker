@@ -96,8 +96,9 @@ ENV NVIDIA_VISIBLE_DEVICES=all
 
 EXPOSE 8188
 
-# Remove APT cache and proxy configuration
-RUN rm -rf /var/lib/apt/lists/* /etc/apt/apt.conf.d/01proxy
+# Remove APT proxy configuration and clean up APT downloaded files
+RUN rm -rf /var/lib/apt/lists/* /etc/apt/apt.conf.d/01proxy \
+    && apt-get clean
 
 ARG COMFYUI_NVIDIA_DOCKER_VERSION="unknown"
 LABEL comfyui-nvidia-docker-build=${COMFYUI_NVIDIA_DOCKER_VERSION}
