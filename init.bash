@@ -134,6 +134,9 @@ BUILD_BASE_SPECIAL="ubuntu22_cuda12.3.2" # this is a special value: when this fe
 echo "-- BUILD_BASE: \"${BUILD_BASE}\""
 if test -z ${BUILD_BASE}; then error_exit "Empty BUILD_BASE variable"; fi
 if [ "A${BUILD_BASE}" == "Aunknown" ]; then error_exit "Invalid BUILD_BASE value"; fi
+DGX_BUILD=$(echo "${BUILD_BASE}" | grep -q "dgx" && echo "true" || echo "false")
+BUILD_BASE=$(echo "${BUILD_BASE}" | sed 's/-dgx//g')
+if [ "A${DGX_BUILD}" == "Atrue" ]; then echo "-- DGX_BUILD: \"${DGX_BUILD}\""; fi
 
 # Check user id and group id
 new_gid=`id -g`
