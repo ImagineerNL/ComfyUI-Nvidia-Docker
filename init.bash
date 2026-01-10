@@ -574,7 +574,11 @@ run_userscript() {
 # Check that `pynvml` is not installed, uninstall it if it is
 if ${PIP3_BASE} show pynvml &>/dev/null; then
   echo "== Uninstalling pynvml"
-  ${PIP3_BASE} uninstall -y pynvml || error_exit "Failed to uninstall pynvml"
+  if [ $USE_UV == "true" ]; then
+    uv pip uninstall pynvml || error_exit "Failed to uninstall pynvml"
+  else
+    pip3 uninstall -y pynvml || error_exit "Failed to uninstall pynvml"
+  fi
 fi
 
 # Pre-install dev packages (used to be 10-pip3Dev.sh)
