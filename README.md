@@ -192,8 +192,9 @@ It is recommended that a container monitoring tool be available to watch the log
     - [5.7.6. Stability Matrix Integration](#576-stability-matrix-integration)
     - [5.7.7. LoRA Manager Integration](#577-lora-manager-integration)
     - [5.7.8. My other ComfyUI related projects](#578-my-other-comfyui-related-projects)
-      - [5.7.8.1. SD Wildcards](#5781-sd-wildcards)
-      - [5.7.8.2. "Combined Workflow"](#5782-combined-workflow)
+      - [5.7.8.1. SafeTensor Cleaner](#5781-safetensor-cleaner)
+      - [5.7.8.2. SD Wildcards](#5782-sd-wildcards)
+      - [5.7.8.3. "Combined Workflow"](#5783-combined-workflow)
 - [6. Troubleshooting](#6-troubleshooting)
   - [6.1. Comfy crash](#61-comfy-crash)
   - [6.2. Virtual environment](#62-virtual-environment)
@@ -865,12 +866,19 @@ Please see [LoRA Manager Integration](https://github.com/mmartial/ComfyUI-Nvidia
 
 ### 5.7.8. My other ComfyUI related projects
 
-#### 5.7.8.1. SD Wildcards
+#### 5.7.8.1. SafeTensor Cleaner
+
+A python script designed to help keep our Stable Diffusion (ComfyUI, [Stability Matrix](https://github.com/mmartial/ComfyUI-Nvidia-Docker/wiki/Stability-Matrix-integration), [LoRA Manager](https://github.com/mmartial/ComfyUI-Nvidia-Docker/wiki/LoRA-Manager-Integration) or other tools) model collection organized. 
+It manages "sidecar" files—like preview images (`.preview.png`), info files (`.civitai.info`), and metadata—ensuring they stay with their models and don't clutter your folders (especially after a model deletion).
+
+For more details, see [SafeTensor Cleaner](https://github.com/mmartial/ComfyUI_misc/tree/main/Safetensor_Cleaner).
+
+#### 5.7.8.2. SD Wildcards
 
 For people that like to use wildcards in their generation, I have created a set of those.
-Please see [https://github.com/mmartial/StableDiffusion_Wildcards](https://github.com/mmartial/StableDiffusion_Wildcards) for details on how to use those and individual links to CivitAI for each of them.
+Please see [https://github.com/mmartial/ComfyUI_misc](https://github.com/mmartial/ComfyUI_misc) for details on how to use those and individual links to CivitAI for each of them.
 
-#### 5.7.8.2. "Combined Workflow"
+#### 5.7.8.3. "Combined Workflow"
 
 This was an attempt to provide a workflow to use the wildcards in ComfyUI.
 It has grown to be a full-fledged experiment that uses a set of custom nodes, can make use of Ollama to extend workflows and generates Illustrious/Flux/ZImage results.
