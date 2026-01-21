@@ -398,8 +398,8 @@ echo "== PIP3_CMD: \"${PIP3_CMD}\""
 if [ ! -z "${TORCH_LOCK+x}" ]; then
   echo "== TORCH_LOCK set: creating constraint file"
   # Replace spaces with newlines to ensure valid constraints file format (though pip usually handles spaces, newlines are safer for constraints files)
-  echo "${TORCH_LOCK}" | tr ' ' '\n' > /tmp/torch_lock.txt
-  PIP3_CMD="${PIP3_CMD} --constraint /tmp/torch_lock.txt"
+  echo "${TORCH_LOCK}" | tr ' ' '\n' > ${COMFYUSER_DIR}/mnt/torch_lock.txt
+  PIP3_CMD="${PIP3_CMD} --constraint ${COMFYUSER_DIR}/mnt/torch_lock.txt"
   echo "== Updated PIP3_CMD with constraints: \"${PIP3_CMD}\""
 fi
 

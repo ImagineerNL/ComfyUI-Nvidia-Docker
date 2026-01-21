@@ -23,6 +23,10 @@
 
 **Although `USE_UV` is not enabled by default, it is recommended to use `uv`** instead of `pip` for faster and more reliable installations. The logic to set the proper `UV_TORCH_BACKEND` is already implemented in the main script, so in general, users should not have to set `PREINSTALL_TORCH_CMD`.
 
+<h2>TORCH_LOCK</h2>
+
+`TORCH_LOCK` is a method to force the version and CUDA backend for PyTorch, Torch Vision and Torch Audio. It can be used to prevent Torch upgrading to a newer version that might break your ComfyUI setup.
+
 <h2>GPU specific note</h2>
 
 When using the **DGX Spark**: you will need to build from source, see the "DGX Spark Support" section.
@@ -690,10 +694,12 @@ The specific version of torch, torchvision and torchaudio must be provided and w
 **Important**: When using this option, it is the end user's responsibility to ensure that the specified version is compatible with the installed CUDA version. Failure to do so may result in the container failing to start.
 
 Example: `TORCH_LOCK=torch==2.9.1+cu130 torchvision==0.24.1+cu130 torchaudio==2.9.1+cu130`
-force PyTorch to 2.9.1 with CUDA 13.0 support; the values of torchvision and torchaudio  as well as the CUDA backend must be provided.
+force PyTorch to 2.9.1 with CUDA 13.0 support; the values of torchvision and torchaudio, as well as the CUDA backend must be provided.
 
-This will create a `/tmp/torch_lock` file with the content of the `TORCH_LOCK` environment variable. This file will be used by the `PIP3_CMD` environmennt variables within the `init.bash` to make sure that the specified versions of torch, torchvision and torchaudio follow the `--constraint /tmp/torch_lock` flag.
+This will create a `run/torch_lock` file (ie in the user's created `run` folder) with the content of the `TORCH_LOCK` environment variable. This file will be used by the `PIP3_CMD` environmennt variables within the `init.bash` to make sure that the specified versions of torch, torchvision and torchaudio follow the `--constraint /tmp/torch_lock` flag.
 `PIP3_CMD` is also used by the `userscript_dir` scripts files.
+
+If you decide to remove the `TORCH_LOCK` environment variable, you should also remove the `run/torch_lock` file.
 
 ### 5.4.8. USE_SOCAT
 
