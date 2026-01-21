@@ -94,7 +94,7 @@ if [ "A$must_build" == "Atrue" ]; then
 fi
 
 # https://download.pytorch.org/whl/cu130/xformers-0.0.33.post2-cp39-abi3-manylinux_2_28_x86_64.whl
-if [ "$CUDA_VERSION" == "cuda13.0" ]; then
+if [ "$CUDA_VERSION" == "cuda13.0" ] || [ "$CUDA_VERSION" == "cuda13.1" ]; then
   CMD="${PIP3_CMD} https://download.pytorch.org/whl/cu130/xformers-0.0.33.post2-cp39-abi3-manylinux_2_28_x86_64.whl"
   echo "CMD: \"${CMD}\""
   ${CMD} || error_exit "Failed to install xformers"
