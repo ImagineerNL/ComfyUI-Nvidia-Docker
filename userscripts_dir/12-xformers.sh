@@ -93,6 +93,14 @@ if [ "A$must_build" == "Atrue" ]; then
   exit 0
 fi
 
+# https://download.pytorch.org/whl/cu130/xformers-0.0.33.post2-cp39-abi3-manylinux_2_28_x86_64.whl
+if [ "$CUDA_VERSION" == "cuda13.0" ]; then
+  CMD="${PIP3_CMD} https://download.pytorch.org/whl/cu130/xformers-0.0.33.post2-cp39-abi3-manylinux_2_28_x86_64.whl"
+  echo "CMD: \"${CMD}\""
+  ${CMD} || error_exit "Failed to install xformers"
+  exit 0
+fi
+
 if [ "A$use_uv" == "Atrue" ]; then
   if [ -z "${UV_TORCH_BACKEND+x}" ]; then error_exit "UV_TORCH_BACKEND is not set"; fi
   echo "== Using uv"
@@ -100,11 +108,12 @@ if [ "A$use_uv" == "Atrue" ]; then
   echo " - uv_cache: $uv_cache"
   echo " - UV_TORCH_BACKEND: $UV_TORCH_BACKEND"
 else
-  if [ -z "${TORCH_INDEX_URL+x}" ]; then error_exit "TORCH_INDEX_URL is not set"; fi
   echo "== Using pip"
   echo " - TORCH_INDEX_URL: $TORCH_INDEX_URL"
 fi
 
-${PIP3_CMD} xformers || error_exit "Failed to install xformers"
+CMD="${PIP3_CMD} xformers ${PIP3_XTRA}"
+echo "CMD: \"${CMD}\""
+${CMD} || error_exit "Failed to install xformers"
 
 exit 0
