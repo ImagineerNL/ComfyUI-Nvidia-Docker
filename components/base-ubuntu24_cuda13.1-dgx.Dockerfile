@@ -31,4 +31,3 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ${NV_CUDNN_PACKAGE_DEV_HEADERS} \
     && apt-mark hold ${NV_CUDNN_PACKAGE_NAME} \
     && apt-get clean
-
