@@ -56,10 +56,13 @@ must_build=false
 # check PyTorch version: < 2.10 cam use pip3, otherwise must build
 if pip3 show torch &>/dev/null; then
   torch_version=$(pip3 show torch | grep Version | awk '{print $2}' | cut -d'.' -f1-2)
-  if [ "A$torch_version" == "A2.10" ]; then must_build=true; fi
+#  if [ "A$torch_version" == "A2.10" ]; then must_build=true; fi
 else
   error_exit "torch not installed, canceling run"
 fi
+
+# If aarch64, we must build (no whl available)
+if [ "$(uname -m)" == "aarch64" ]; then must_build=true; fi
 
 echo "PyTorch version: $torch_version"
 echo "must_build: \"${must_build}\""
@@ -116,12 +119,21 @@ if [ "A$must_build" == "Atrue" ]; then
   exit 0
 fi
 
-# https://download.pytorch.org/whl/cu130/xformers-0.0.33.post2-cp39-abi3-manylinux_2_28_x86_64.whl
+whl_cuda13_torch29="https://download.pytorch.org/whl/cu130/xformers-0.0.33.post2-cp39-abi3-manylinux_2_28_x86_64.whl"
+whl_cuda13_torch210="https://download.pytorch.org/whl/cu130/xformers-0.0.34-cp39-abi3-manylinux_2_28_x86_64.whl"
 if [ "$CUDA_VERSION" == "cuda13.0" ] || [ "$CUDA_VERSION" == "cuda13.1" ]; then
-  CMD="${PIP3_CMD} https://download.pytorch.org/whl/cu130/xformers-0.0.33.post2-cp39-abi3-manylinux_2_28_x86_64.whl"
-  echo "CMD: \"${CMD}\""
-  ${CMD} || error_exit "Failed to install xformers"
-  exit 0
+  CMD=""
+  if [ "$torch_version" == "2.9" ]; then
+    CMD="${PIP3_CMD} $whl_cuda13_torch29"
+  elif [ "$torch_version" == "2.10" ]; then
+    CMD="${PIP3_CMD} $whl_cuda13_torch210"
+  fi
+
+  if [ ! -z "$CMD" ]; then
+    echo "CMD: \"${CMD}\""
+    ${CMD} || error_exit "Failed to install xformers"
+    exit 0
+  fi
 fi
 
 if [ "A$use_uv" == "Atrue" ]; then
