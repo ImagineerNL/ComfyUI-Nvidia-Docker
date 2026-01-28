@@ -395,8 +395,9 @@ else
 fi
 echo "== PIP3_CMD: \"${PIP3_CMD}\""
 
-if [ ! -z "${TORCH_LOCK+x}" ]; then
-  echo "== TORCH_LOCK set: creating constraint file"
+TORCH_LOCK=${TORCH_LOCK:-""}
+if [ ! -z "${TORCH_LOCK}" ]; then
+  echo "== TORCH_LOCK set: creating constraint file with values: \"${TORCH_LOCK}\""
   # Replace spaces with newlines to ensure valid constraints file format (though pip usually handles spaces, newlines are safer for constraints files)
   echo "${TORCH_LOCK}" | tr ' ' '\n' > ${COMFYUSER_DIR}/mnt/torch_lock.txt
   PIP3_CMD="${PIP3_CMD} --constraint ${COMFYUSER_DIR}/mnt/torch_lock.txt"
@@ -596,6 +597,7 @@ ${PIP3_CMD} cmake || error_exit "Failed to install cmake"
 ${PIP3_CMD} wheel || error_exit "Failed to install wheel"
 ${PIP3_CMD} pybind11 || error_exit "Failed to install pybind11"
 ${PIP3_CMD} packaging || error_exit "Failed to install packaging"
+${PIP3_CMD} Cython || error_exit "Failed to install Cython"
 # Addressing: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead.
 ${PIP3_CMD} nvidia-ml-py || error_exit "Failed to install nvidia-ml-py"
 # Manually remove `pynvml` after a `dockr exec`
@@ -632,7 +634,7 @@ fi
 # check that cuda_backend is set
 if [ -z "${cuda_backend}" ]; then error_exit "cuda_backend is not set"; fi
 
-if [ ! -z "${TORCH_LOCK+x}" ]; then
+if [ ! -z "${TORCH_LOCK}" ]; then
   echo "== TORCH_LOCK set: locking torch version to ${TORCH_LOCK}"
   torch_version="${TORCH_LOCK}"
 fi
