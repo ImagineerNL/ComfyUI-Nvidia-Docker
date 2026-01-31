@@ -34,6 +34,26 @@ else
   echo "== Using pip"
 fi
 
+# --- START OF MODIFICATION ---
+echo "Checking for existing onnxruntime installations..."
+
+# Check if standard onnxruntime (CPU) is installed
+if pip show onnxruntime > /dev/null 2>&1; then
+    # Check if onnxruntime-gpu is ALSO installed
+    if pip show onnxruntime-gpu > /dev/null 2>&1; then
+        echo "Found BOTH onnxruntime and onnxruntime-gpu."
+        echo "Uninstalling both to ensure clean GPU installation..."
+        pip uninstall -y onnxruntime onnxruntime-gpu || error_exit "Failed to uninstall conflicting packages"
+    else
+        # Only standard onnxruntime is installed
+        echo "Found onnxruntime (CPU). Uninstalling it to replace with GPU version..."
+        pip uninstall -y onnxruntime || error_exit "Failed to uninstall onnxruntime"
+    fi
+else
+    echo "No conflicting 'onnxruntime' (CPU) package found. Proceeding..."
+fi
+# --- END OF MODIFICATION ---
+
 CMD="${PIP3_CMD} onnxruntime-gpu"
 echo "CMD: \"${CMD}\""
 ${CMD} || error_exit "Failed to install onnxruntime-gpu"
