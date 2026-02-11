@@ -5,25 +5,33 @@ START_TIME=$(date +%s)
 
 # Script that installs picklescan package and runs a scan.
 # Picklescan is a security scanner detecting Python Pickle files (e.g. .pt files) performing suspicious actions.
-# Github shows plenty of resources on the risks: https://github.com/mmaitre314/picklescan
+# Picklescan Github has plenty of resources on the risks: https://github.com/mmaitre314/picklescan
 # Since there are still so many .pt files circulating and in use (e.g. Ultralytics), they should be scanned regularly.
 # 
-# !!NOTE: This is a first line of defense, and isn't flawless. Best protection is to not use picke files at all !!
+# !!NOTE: This is a first line of defense, and isn't flawless. Best protection is to not use pickle files at all !!
 #
 # Outputs result to console and with commented info to a logfile in dockerscripts dir (overwrites)
 #
-# Can safely be kept in the userscripts dir to scan each time, or just once in a while activate it manually.
-# Scans entire /basedir due to some custom nodes putting models in their own custom_node app directory
-# If that takes too long, it falls back to just /basedir/models (no timeout)
-
+# Can safely be kept in the userscripts dir to scan each time.
+# Scans entire /basedir by default due to some custom nodes putting models in their own custom_node app directory
 
 # --- CONFIGURATION ---
 TARGET_DIR="/basedir"
-FALLBACK_DIR="/basedir/models"
-SCAN_TIMEOUT=15       # Set timeout to your wishes; Scanning 200 files takes about 10s
-FAIL_ON_THREATS="${FAIL_ON_THREATS:-true}"  # Set to false if you want to continue docker startup
-FAIL_ON_WARNINGS="${FAIL_ON_WARNINGS:-false}"  # Set to true if you want to stop docker startup on nonblocking warnings
-FORCE_REINSTALL="${FORCE_REINSTALL:-false}" # Set to true to force reinstall of Picklescan
+SCAN_TIMEOUT=15                                 # Set timeout to your wishes; Scanning 200 files takes about 10s
+FAIL_ON_THREATS="${FAIL_ON_THREATS:-true}"      # Set to false if you want to continue docker startup
+FAIL_ON_WARNINGS="${FAIL_ON_WARNINGS:-false}"   # Set to true if you want to stop docker startup on nonblocking warnings
+FAIL_ON_TIMEOUT="${FAIL_ON_TIMEOUT:-true}"      # Set to false if you want to proceed even if scan times out
+FORCE_REINSTALL="${FORCE_REINSTALL:-false}"     # Set to true to force reinstall of Picklescan
+
+# Regex patterns for file/directory filtering (Requires picklescan >= 1.0.2)
+# Leave empty to scan all eligible files in TARGET_DIR  recursively (default behavior)
+SCAN_INCLUDE_REGEX=""       # e.g., '\.pt$' - Only scan files matching this
+SCAN_EXCLUDE_REGEX=""       # e.g., '\.bin$' - Skip files matching this
+SCAN_INCLUDE_DIR_REGEX=""   # Only descend into directories matching this
+SCAN_EXCLUDE_DIR_REGEX=""   # e.g., 'blender' - Skip these directories
+
+# --- PICKLESCAN MINIMUM VERSION ---
+MIN_PICKLESCAN_VERSION="1.0.2" # (1.0.2 adds 'include' and 'exclude' options)
 # ---------------------
 
 set -e
@@ -55,7 +63,7 @@ error_exit() {
 
 source /comfy/mnt/venv/bin/activate || error_exit "Failed to activate virtualenv"
 
-# --- CHECK EXISTING INSTALLATION ---
+# --- CHECK EXISTING INSTALLATION & VERSION ---
 should_install=true
 
 if pip show picklescan > /dev/null 2>&1; then
@@ -64,7 +72,18 @@ if pip show picklescan > /dev/null 2>&1; then
         pip uninstall -y picklescan || error_exit "Failed to uninstall picklescan"
         echo "${LOG_INFO}INFO:${NC} Picklescan package removed"
     else
-        should_install=false
+        # Check Version
+        INSTALLED_VER=$(pip show picklescan 2>/dev/null | grep Version | awk '{print $2}')
+        # Sort versions: if the lowest is the MIN_VERSION, then INSTALLED >= MIN
+        LOWEST=$(printf '%s\n' "$MIN_PICKLESCAN_VERSION" "$INSTALLED_VER" | sort -V | head -n1)
+        
+        if [ "$LOWEST" = "$MIN_PICKLESCAN_VERSION" ]; then
+             echo "${LOG_INFO}INFO:${NC} Picklescan is already installed ($INSTALLED_VER >= $MIN_PICKLESCAN_VERSION)."
+             should_install=false
+        else
+             echo "${LOG_WARN}WARNING:${NC} Installed Picklescan ($INSTALLED_VER) is older than required ($MIN_PICKLESCAN_VERSION). Updating..."
+             pip uninstall -y picklescan || error_exit "Failed to uninstall old picklescan"
+        fi
     fi
 fi
 
@@ -93,7 +112,6 @@ LOG_FILE="${SCRIPT_DIR}/picklescan_output.txt"
 
 echo "${LOG_INFO}== Running picklescan...${NC}"
 echo " - Target: ${TARGET_DIR}"
-echo " - Fallback Target: ${FALLBACK_DIR}"
 echo " - Timeout: ${SCAN_TIMEOUT}s"
 echo " - Log: ${LOG_FILE}"
 echo "..."
@@ -110,6 +128,20 @@ cat <<EOF > "${LOG_FILE}"
 #
 EOF
 
+# --- Prepare Scan Arguments ---
+# Build array for optional arguments to avoid quoting issues
+REGEX_ARGS=()
+
+[ -n "$SCAN_INCLUDE_REGEX" ] && REGEX_ARGS+=("--include" "$SCAN_INCLUDE_REGEX")
+[ -n "$SCAN_EXCLUDE_REGEX" ] && REGEX_ARGS+=("--exclude" "$SCAN_EXCLUDE_REGEX")
+[ -n "$SCAN_INCLUDE_DIR_REGEX" ] && REGEX_ARGS+=("--include-dir" "$SCAN_INCLUDE_DIR_REGEX")
+[ -n "$SCAN_EXCLUDE_DIR_REGEX" ] && REGEX_ARGS+=("--exclude-dir" "$SCAN_EXCLUDE_DIR_REGEX")
+
+# Log usage of regex to file
+if [ ${#REGEX_ARGS[@]} -gt 0 ]; then
+    echo "Using Filter Arguments: ${REGEX_ARGS[*]}" >> "${LOG_FILE}"
+fi
+
 # --- Run Scan , log to File ONLY (avoiding 'harmless' warning messages cluttering console) ---
 
 # Enable pipefail: if 'timeout' fails, the whole pipe fails
@@ -119,32 +151,37 @@ set -o pipefail
 set +e 
 
 # Run the main scan with a timeout
+# PYTHONUNBUFFERED=1 ensures output is written to file immediately, not lost if killed.
 # Redirect stdout/stderr to log file.
-timeout "${SCAN_TIMEOUT}" picklescan --path "${TARGET_DIR}" >> "${LOG_FILE}" 2>&1
+PYTHONUNBUFFERED=1 timeout "${SCAN_TIMEOUT}" picklescan --path "${TARGET_DIR}" "${REGEX_ARGS[@]}" >> "${LOG_FILE}" 2>&1
 EXIT_CODE=$?
 
 # Check the result
 if [ $EXIT_CODE -eq 124 ]; then
     # 124 = Timeout
     
-    # 1. Write clean text to log
+    # Write clean to log
     echo "!! Scan timed out (> ${SCAN_TIMEOUT}s)." >> "${LOG_FILE}"
-    # 2. Write color to console
+    echo "!! Consider adding exclusions or extending the timeout." >> "${LOG_FILE}"
+    
+    # Write color to console
     echo "${LOG_WARN}WARNING:${NC} !! Scan timed out (> ${SCAN_TIMEOUT}s)."
-    echo "         !! Modify script to extend timeout or run manually inside container venv:" | tee -a "${LOG_FILE}"
-    echo "         !! picklescan --path ${TARGET_DIR} " | tee -a "${LOG_FILE}"
-    echo "         !! Switching to fallback directory (no timeout): ${FALLBACK_DIR}" | tee -a "${LOG_FILE}"
+    echo "         Check log for details. Consider adding exclusions or extending the timeout."
     
-    # Run the fallback scan
-    picklescan --path "${FALLBACK_DIR}" >> "${LOG_FILE}" 2>&1
-    FALLBACK_CODE=$?
-    
-    # Check Fallback Result
-    if [ $FALLBACK_CODE -ne 0 ] && [ $FALLBACK_CODE -ne 1 ]; then
-         # Write clean to log
-         echo "!! Warning: Fallback scan returned unusual exit code: $FALLBACK_CODE" >> "${LOG_FILE}"
-         # Write color to console
-         echo "${LOG_WARN}WARNING:${NC} Fallback scan returned unusual exit code: $FALLBACK_CODE"
+    # 3. Handle Fail on Timeout
+    if [ "$FAIL_ON_TIMEOUT" = "true" ]; then
+        # Write clean to log
+        echo "Timeout reached and FAIL_ON_TIMEOUT is true. Exiting incomplete scan." >> "${LOG_FILE}"
+
+        # Write color to console
+        echo -e "${LOG_ERR}Timeout reached and FAIL_ON_TIMEOUT is true. Exiting incomplete scan.${NC}"
+        exit 1
+    else
+        # Write clean to log
+        echo "!! FAIL_ON_TIMEOUT is false: Proceeding with incomplete scan results..." >> "${LOG_FILE}"
+
+        # Write color to console
+        echo "${LOG_WARN}WARNING: FAIL_ON_TIMEOUT is false. Proceeding with INCOMPLETE scan results...${NC}"
     fi
 
 elif [ $EXIT_CODE -ne 0 ] && [ $EXIT_CODE -ne 1 ]; then
@@ -157,15 +194,18 @@ fi
 
 # Re-enable 'set -e'
 set -e
+# Disable pipefail to ensure grep doesn't crash script if string not found
+set +o pipefail
 
 # --- ANALYZE RESULTS & PRINT SUMMARY TO CONSOLE ---
 
 # Extract counts from log file (default to 0 if not found)
-INFECTED_COUNT=$(grep "Infected files:" "${LOG_FILE}" | awk '{print $3}')
-GLOBALS_COUNT=$(grep "Dangerous globals:" "${LOG_FILE}" | awk '{print $3}')
-WARNING_COUNT=$(grep -c "WARNING:" "${LOG_FILE}")
+# We append '|| true' to ensure script doesn't exit if grep returns 1 (not found)
+# This is common if scan timed out and didn't write the summary footer.
+INFECTED_COUNT=$(grep "Infected files:" "${LOG_FILE}" | awk '{print $3}' || true)
+GLOBALS_COUNT=$(grep "Dangerous globals:" "${LOG_FILE}" | awk '{print $3}' || true)
+WARNING_COUNT=$(grep -c "WARNING:" "${LOG_FILE}" || true)
 
-# Ensure variables are numbers (handle empty grep results)
 INFECTED_COUNT=${INFECTED_COUNT:-0}
 GLOBALS_COUNT=${GLOBALS_COUNT:-0}
 WARNING_COUNT=${WARNING_COUNT:-0}
@@ -207,6 +247,7 @@ cat <<EOF >> "${LOG_FILE}"
 # You should NOT ignore 'infected' or 'dangerous globals' messages.
 # No support given on this scan script; for scan issues visit the Picklescan github.
 # For Pickle issues or false positives; contact Picklescan github or offending file owner.
+# See Picklescan script on how to exclude files and directories from scan.
 EOF
 
 echo "${LOG_INFO}INFO:${NC} Saved detailed Picklescan results to ${LOG_FILE}"
